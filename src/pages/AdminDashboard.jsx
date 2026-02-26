@@ -47,6 +47,9 @@ export default function AdminDashboard() {
   const [salesEmail, setSalesEmail] = useState("sales@jegnit.com");
   const [salesPassword, setSalesPassword] = useState("1234");
   const [credMessage, setCredMessage] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState(null);
+  const [selectedStats, setSelectedStats] = useState(null);
+  const [showMonthlyCards, setShowMonthlyCards] = useState(false);
 
   useEffect(() => {
     try {
@@ -123,26 +126,65 @@ export default function AdminDashboard() {
       {monthlySummary.length === 0 ? (
         <div className="alert alert-info">No sales recorded yet. Monthly revenue will appear here once sales are added.</div>
       ) : (
-        <div className="grid-3" style={{ marginBottom: "20px" }}>
-          {monthlySummary.map((m) => (
-            <div key={m.month} className="info-box info-box-secondary">
-              <div className="info-box-label">Month</div>
-              <div className="info-box-value" style={{ fontSize: "18px" }}>{m.month}</div>
-              <div className="info-box-footer">
-                Revenue:{" "}
-                <strong>
-                  ETB{" "}
-                  {Number(m.total || 0).toLocaleString("en-ET", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </strong>
-                <br />
-                Items sold: <strong>{Number(m.qty || 0)}</strong>
+        <>
+          <div style={{ marginBottom: "12px" }}>
+            <button
+              type="button"
+              className="btn-small"
+              onClick={() => setShowMonthlyCards((v) => !v)}
+            >
+              {showMonthlyCards ? "Hide Monthly Cards" : "Show Monthly Cards"}
+            </button>
+          </div>
+          {showMonthlyCards && (
+            <>
+              <div className="grid-3" style={{ marginBottom: "20px" }}>
+                {monthlySummary.map((m) => (
+                  <button
+                    key={m.month}
+                    type="button"
+                    onClick={() => {
+                      setSelectedMonth(m.month);
+                      setSelectedStats(m);
+                    }}
+                    className={`info-box info-box-secondary clickable-card${
+                      selectedMonth === m.month ? " clickable-card-active" : ""
+                    }`}
+                    style={{ textAlign: "left", cursor: "pointer" }}
+                  >
+                    <div className="info-box-label">Month</div>
+                    <div className="info-box-value" style={{ fontSize: "18px" }}>{m.month}</div>
+                    <div className="info-box-footer">
+                      Revenue:{" "}
+                      <strong>
+                        ETB{" "}
+                        {Number(m.total || 0).toLocaleString("en-ET", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </strong>
+                      <br />
+                      Items sold: <strong>{Number(m.qty || 0)}</strong>
+                    </div>
+                  </button>
+                ))}
               </div>
-            </div>
-          ))}
-        </div>
+              {selectedMonth && selectedStats && (
+                <div className="alert alert-info">
+                  In <strong>{selectedMonth}</strong>, total revenue was{" "}
+                  <strong>
+                    ETB{" "}
+                    {Number(selectedStats.total || 0).toLocaleString("en-ET", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </strong>{" "}
+                  from <strong>{Number(selectedStats.qty || 0)}</strong> items sold.
+                </div>
+              )}
+            </>
+          )}
+        </>
       )}
 
       <div className="grid-3">

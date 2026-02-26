@@ -191,7 +191,6 @@ export default function Sales() {
                 <th>Product</th>
                 <th>Size</th>
                 <th>Price (ETB)</th>
-                <th>Main Stock</th>
                 <th>Shop Stock</th>
               </tr>
             </thead>
@@ -207,7 +206,6 @@ export default function Sales() {
                         maximumFractionDigits: 2,
                       })}
                     </td>
-                    <td>{Number(s.mainStockQty || 0)}</td>
                     <td>{Number(s.shopStockQty || 0)}</td>
                   </tr>
                 ))

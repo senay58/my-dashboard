@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { supabase } from "../supabaseClient";
 
 const STORAGE_KEY = "jegnit-inventory-data-v1";
+const REMOTE_TABLE = "inventory_state_v1";
 
 const PAYMENT_METHODS = ["Cash", "Card", "Bank Transfer"];
 const DELIVERY_TYPES = ["Pickup", "Delivery"];
@@ -39,10 +41,24 @@ const loadInitialState = () => {
   }
 };
 
+const fetchRemoteState = async () => {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from(REMOTE_TABLE)
+    .select("products, sales, replacements")
+    .eq("id", 1)
+    .maybeSingle();
+  if (error) {
+    return null;
+  }
+  return data || null;
+};
+
 export function InventoryProvider({ children }) {
   const [products, setProducts] = useState(() => loadInitialState().products);
   const [sales, setSales] = useState(() => loadInitialState().sales);
   const [replacements, setReplacements] = useState(() => loadInitialState().replacements);
+  const [remoteLoaded, setRemoteLoaded] = useState(false);
 
   useEffect(() => {
     try {
@@ -51,6 +67,29 @@ export function InventoryProvider({ children }) {
     } catch {
       // ignore persistence errors
     }
+  }, [products, sales, replacements]);
+
+  useEffect(() => {
+    if (!supabase || remoteLoaded) return;
+    (async () => {
+      const remote = await fetchRemoteState();
+      if (remote) {
+        setProducts(remote.products || []);
+        setSales(remote.sales || []);
+        setReplacements(remote.replacements || []);
+      }
+      setRemoteLoaded(true);
+    })();
+  }, [remoteLoaded]);
+
+  useEffect(() => {
+    if (!supabase) return;
+    const sync = async () => {
+      const payload = { id: 1, products, sales, replacements };
+      // upsert single row with id=1 to act as app-wide snapshot
+      await supabase.from(REMOTE_TABLE).upsert(payload, { onConflict: "id" });
+    };
+    sync();
   }, [products, sales, replacements]);
 
   const findProductById = (id) => products.find((p) => p.id === id);
