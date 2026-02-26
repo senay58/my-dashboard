@@ -4,7 +4,7 @@ import "../index.css";
 import { useInventory } from "../context/InventoryContext.jsx";
 
 export default function AdminDashboard() {
-  const { products, sales, replacements, getMonthlySummary } = useInventory();
+  const { products, sales, replacements, getMonthlySummary, resetAllData } = useInventory();
 
   const totalProducts = products.length;
   const totalMain = useMemo(
@@ -51,6 +51,8 @@ export default function AdminDashboard() {
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedStats, setSelectedStats] = useState(null);
   const [showMonthlyCards, setShowMonthlyCards] = useState(false);
+  const [resetError, setResetError] = useState("");
+  const [resetOk, setResetOk] = useState("");
 
   useEffect(() => {
     try {
@@ -80,6 +82,27 @@ export default function AdminDashboard() {
       setTimeout(() => setCredMessage(""), 2500);
     } catch {
       setCredMessage("Could not save credentials.");
+    }
+  };
+
+  const handleResetAll = (e) => {
+    e.preventDefault();
+    setResetError("");
+    setResetOk("");
+    const formData = new FormData(e.target);
+    const emailInput = formData.get("confirmAdminEmail");
+    const passwordInput = formData.get("confirmAdminPassword");
+    if (emailInput !== adminEmail || passwordInput !== adminPassword) {
+      setResetError("Admin email or password does not match. Reset cancelled.");
+      return;
+    }
+    if (
+      window.confirm(
+        "This will erase ALL products, sales, and replacements data from the system. This cannot be undone. Continue?"
+      )
+    ) {
+      resetAllData();
+      setResetOk("All inventory, sales, and replacements data has been reset.");
     }
   };
 
@@ -245,6 +268,38 @@ export default function AdminDashboard() {
       </form>
       {credMessage && (
         <div className={`alert ${credMessage.includes("updated") ? "alert-success" : "alert-error"}`}>{credMessage}</div>
+      )}
+      <h3 style={{ marginTop: "32px", marginBottom: "12px", color: "var(--orange)" }}>Danger Zone - Reset All Data</h3>
+      <form onSubmit={handleResetAll} className="form-grid">
+        <div className="form-group">
+          <label>Confirm Admin Email</label>
+          <input
+            type="email"
+            name="confirmAdminEmail"
+            placeholder="Type current admin email to confirm"
+            required
+          />
+        </div>
+        <div className="form-group">
+          <label>Confirm Admin Password</label>
+          <input
+            type="password"
+            name="confirmAdminPassword"
+            placeholder="Type current admin password to confirm"
+            required
+          />
+        </div>
+        <div className="form-group">
+          <button type="submit" className="btn-danger">
+            Reset ALL Products, Sales & Replacements
+          </button>
+        </div>
+      </form>
+      {(resetError || resetOk) && (
+        <div style={{ marginTop: "12px" }}>
+          {resetError && <div className="alert alert-error">{resetError}</div>}
+          {resetOk && <div className="alert alert-success">{resetOk}</div>}
+        </div>
       )}
     </GlassCard>
   );
