@@ -14,6 +14,7 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [role, setRole] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLoginSuccess = (userRole) => {
     setIsLoggedIn(true);
@@ -58,7 +59,7 @@ export default function App() {
 
   return (
     <Router>
-      <div className={`app ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+      <div className={`app ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${sidebarOpen ? "sidebar-open" : ""}`}>
         <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
           <div className="sidebar-header">
             <button
@@ -86,19 +87,36 @@ export default function App() {
           <nav>
             {role === "admin" && (
               <>
-                <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>
+                <NavLink
+                  to="/"
+                  end
+                  className={({ isActive }) => (isActive ? "active" : "")}
+                  onClick={() => setSidebarOpen(false)}
+                >
                   <span className="nav-dot" />
                   <span className="nav-label">Dashboard</span>
                 </NavLink>
-                <NavLink to="/products" className={({ isActive }) => (isActive ? "active" : "")}>
+                <NavLink
+                  to="/products"
+                  className={({ isActive }) => (isActive ? "active" : "")}
+                  onClick={() => setSidebarOpen(false)}
+                >
                   <span className="nav-dot" />
                   <span className="nav-label">Products & Stock</span>
                 </NavLink>
-                <NavLink to="/reports" className={({ isActive }) => (isActive ? "active" : "")}>
+                <NavLink
+                  to="/reports"
+                  className={({ isActive }) => (isActive ? "active" : "")}
+                  onClick={() => setSidebarOpen(false)}
+                >
                   <span className="nav-dot" />
                   <span className="nav-label">Reports</span>
                 </NavLink>
-                <NavLink to="/replacements" className={({ isActive }) => (isActive ? "active" : "")}>
+                <NavLink
+                  to="/replacements"
+                  className={({ isActive }) => (isActive ? "active" : "")}
+                  onClick={() => setSidebarOpen(false)}
+                >
                   <span className="nav-dot" />
                   <span className="nav-label">Replacements</span>
                 </NavLink>
@@ -106,11 +124,19 @@ export default function App() {
             )}
             {role === "sales" && (
               <>
-                <NavLink to="/sales" className={({ isActive }) => (isActive ? "active" : "")}>
+                <NavLink
+                  to="/sales"
+                  className={({ isActive }) => (isActive ? "active" : "")}
+                  onClick={() => setSidebarOpen(false)}
+                >
                   <span className="nav-dot" />
                   <span className="nav-label">Sales Entry</span>
                 </NavLink>
-                <NavLink to="/sales-dashboard" className={({ isActive }) => (isActive ? "active" : "")}>
+                <NavLink
+                  to="/sales-dashboard"
+                  className={({ isActive }) => (isActive ? "active" : "")}
+                  onClick={() => setSidebarOpen(false)}
+                >
                   <span className="nav-dot" />
                   <span className="nav-label">Sales Dashboard</span>
                 </NavLink>
@@ -123,8 +149,21 @@ export default function App() {
             </button>
           </div>
         </aside>
+        {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
 
         <main className="main">
+          <div className="mobile-topbar">
+            <button
+              type="button"
+              className="mobile-menu-toggle btn-icon"
+              onClick={() => setSidebarOpen((v) => !v)}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+            <div className="mobile-topbar-title">JEGNIT Inventory</div>
+          </div>
           <Routes>
             {role === "admin" && (
               <>

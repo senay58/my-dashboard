@@ -4,7 +4,7 @@ import "../index.css";
 import { useInventory } from "../context/InventoryContext.jsx";
 
 export default function AdminDashboard() {
-  const { products, sales, replacements, resetSales } = useInventory();
+  const { products, sales, replacements, getMonthlySummary } = useInventory();
 
   const totalProducts = products.length;
   const totalMain = useMemo(
@@ -35,6 +35,11 @@ export default function AdminDashboard() {
   const todaySalesQty = sales
     .filter((s) => s.date === today)
     .reduce((sum, s) => sum + (Number(s.qty) || 0), 0);
+
+  const monthlySummary = useMemo(
+    () => getMonthlySummary(sales || [], {}),
+    [sales, getMonthlySummary]
+  );
 
   // Editable login credentials for Admin & Sales
   const [adminEmail, setAdminEmail] = useState("admin@jegnit.com");
@@ -114,6 +119,32 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      <h3 style={{ marginTop: "24px", marginBottom: "12px", color: "var(--orange)" }}>Monthly Revenue Overview</h3>
+      {monthlySummary.length === 0 ? (
+        <div className="alert alert-info">No sales recorded yet. Monthly revenue will appear here once sales are added.</div>
+      ) : (
+        <div className="grid-3" style={{ marginBottom: "20px" }}>
+          {monthlySummary.map((m) => (
+            <div key={m.month} className="info-box info-box-secondary">
+              <div className="info-box-label">Month</div>
+              <div className="info-box-value" style={{ fontSize: "18px" }}>{m.month}</div>
+              <div className="info-box-footer">
+                Revenue:{" "}
+                <strong>
+                  ETB{" "}
+                  {Number(m.total || 0).toLocaleString("en-ET", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </strong>
+                <br />
+                Items sold: <strong>{Number(m.qty || 0)}</strong>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="grid-3">
         <div className="info-box info-box-secondary">
           <div className="info-box-label">Total Products</div>
@@ -131,23 +162,6 @@ export default function AdminDashboard() {
           <div className="info-box-footer">
             Completed exchange transactions with price differences tracked.
           </div>
-        </div>
-      </div>
-
-      <h3 style={{ marginTop: "32px", marginBottom: "12px", color: "var(--orange)" }}>Sales Dashboard Controls</h3>
-      <div className="form-grid">
-        <div className="form-group">
-          <label>Reset Sales Data</label>
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm("This will clear all recorded sales and reset the sales dashboard. Continue?")) {
-                resetSales();
-              }
-            }}
-          >
-            Reset Sales Dashboard
-          </button>
         </div>
       </div>
 

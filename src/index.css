@@ -208,6 +208,35 @@ body {
   overflow-y: auto;
 }
 
+.mobile-topbar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.mobile-topbar-title {
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--orange);
+}
+
+.mobile-menu-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  background: var(--black-light);
+}
+
+.mobile-menu-toggle span {
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--white);
+}
+
 .glass-card {
   background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.9));
   border-radius: 18px;
@@ -538,17 +567,50 @@ tr:nth-child(even) td {
     grid-template-columns: 1fr;
   }
   .sidebar {
-    position: sticky;
+    position: fixed;
     top: 0;
-    max-height: 200px;
-    overflow-y: auto;
+    left: 0;
+    bottom: 0;
+    width: 260px;
+    max-width: 80%;
+    max-height: 100vh;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease-in-out;
+  }
+  .app.sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 90;
+  }
+  .sidebar nav {
+    flex-direction: column;
+  }
+  .sidebar a {
+    white-space: nowrap;
+  }
+  .logout-btn {
+    width: 100%;
   }
   .grid-3 {
     grid-template-columns: repeat(2, 1fr);
   }
+  .mobile-topbar {
+    display: flex;
+  }
+  .mobile-menu-toggle {
+    display: flex;
+  }
 }
 
 @media (max-width: 768px) {
+  .main {
+    padding: 16px;
+  }
   .grid-3,
   .grid-2 {
     grid-template-columns: 1fr;

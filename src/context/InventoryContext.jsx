@@ -311,10 +311,6 @@ export function InventoryProvider({ children }) {
     return Array.from(map.values()).sort((a, b) => (a.month < b.month ? -1 : 1));
   };
 
-  const resetSales = () => {
-    saveSales([]);
-  };
-
   const recordReplacement = ({ saleId, newProductId, newSizeId, qty }) => {
     const amount = Number(qty) || 0;
     if (!saleId || !newProductId || !newSizeId || amount <= 0) {
@@ -442,7 +438,6 @@ export function InventoryProvider({ children }) {
     getDailySummary,
     getMonthlySummary,
     recordReplacement,
-    resetSales,
   };
 
   return <InventoryContext.Provider value={value}>{children}</InventoryContext.Provider>;

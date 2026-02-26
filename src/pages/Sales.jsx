@@ -180,6 +180,43 @@ export default function Sales() {
         </div>
       )}
 
+      <h3 style={{ marginTop: "32px", marginBottom: "12px", color: "var(--orange)" }}>Available Stock (Shop)</h3>
+      {products.length === 0 ? (
+        <div className="alert alert-info">No products have been set up yet. Ask the Admin to add products and sizes.</div>
+      ) : (
+        <div className="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Size</th>
+                <th>Price (ETB)</th>
+                <th>Main Stock</th>
+                <th>Shop Stock</th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.flatMap((p) =>
+                (p.sizes || []).map((s) => (
+                  <tr key={`${p.id}-${s.id}`}>
+                    <td>{p.name}</td>
+                    <td>{s.size}</td>
+                    <td>
+                      {Number(s.price || 0).toLocaleString("en-ET", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                    <td>{Number(s.mainStockQty || 0)}</td>
+                    <td>{Number(s.shopStockQty || 0)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       <h3 style={{ marginTop: "32px", marginBottom: "12px", color: "var(--orange)" }}>Recent Sales</h3>
       <div className="table-wrapper">
         <table>
