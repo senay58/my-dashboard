@@ -6,6 +6,7 @@ const CRED_KEY = "jegnit-inventory-credentials-v1";
 const DEFAULT_CREDS = {
   admin: { email: "admin@jegnit.com", password: "1234" },
   sales: { email: "sales@jegnit.com", password: "1234" },
+  secretCode: "JEGNIT-RESET-2026",
 };
 
 export default function Login({ onLoginSuccess }) {
@@ -13,6 +14,9 @@ export default function Login({ onLoginSuccess }) {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [creds, setCreds] = useState(DEFAULT_CREDS);
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [recoveryCode, setRecoveryCode] = useState("");
+  const [recoveryMessage, setRecoveryMessage] = useState("");
 
   useEffect(() => {
     try {
@@ -20,7 +24,11 @@ export default function Login({ onLoginSuccess }) {
       if (!raw) return;
       const parsed = JSON.parse(raw);
       if (parsed?.admin?.email && parsed?.admin?.password && parsed?.sales?.email && parsed?.sales?.password) {
-        setCreds(parsed);
+        setCreds({
+          admin: parsed.admin,
+          sales: parsed.sales,
+          secretCode: parsed.secretCode || DEFAULT_CREDS.secretCode,
+        });
       }
     } catch {
       // ignore
@@ -37,6 +45,17 @@ export default function Login({ onLoginSuccess }) {
       onLoginSuccess("sales");
     } else {
       setMessage("Invalid credentials. Try again.");
+    }
+  };
+
+  const handleRecovery = (e) => {
+    e.preventDefault();
+    setRecoveryMessage("");
+    if (recoveryCode.trim() === (creds.secretCode || DEFAULT_CREDS.secretCode)) {
+      setRecoveryMessage("Secret code accepted. Logged in as Admin.");
+      onLoginSuccess("admin");
+    } else {
+      setRecoveryMessage("Invalid secret code.");
     }
   };
 
@@ -82,6 +101,34 @@ export default function Login({ onLoginSuccess }) {
             </div>
           </form>
 
+          <div style={{ marginTop: "8px", fontSize: "13px" }}>
+            <button
+              type="button"
+              className="btn-small"
+              onClick={() => setShowRecovery((v) => !v)}
+            >
+              {showRecovery ? "Hide secret code login" : "Forgot password? Use secret code"}
+            </button>
+          </div>
+
+          {showRecovery && (
+            <form onSubmit={handleRecovery} className="form-grid" style={{ marginTop: "12px" }}>
+              <div className="form-group">
+                <label>Admin Secret Code</label>
+                <input
+                  type="password"
+                  placeholder="Enter secret code only admin knows"
+                  value={recoveryCode}
+                  onChange={(e) => setRecoveryCode(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <button type="submit">Unlock Admin Reset</button>
+              </div>
+            </form>
+          )}
+
           <div className="alert alert-info" style={{ marginTop: "16px", fontSize: "13px" }}>
             <strong>Demo accounts:</strong>
             <br />
@@ -93,6 +140,14 @@ export default function Login({ onLoginSuccess }) {
           {message && (
             <div className={`alert ${message.includes("Welcome") ? "alert-success" : "alert-error"}`} style={{ marginTop: "12px" }}>
               {message}
+            </div>
+          )}
+          {recoveryMessage && (
+            <div
+              className={`alert ${recoveryMessage.includes("accepted") ? "alert-success" : "alert-error"}`}
+              style={{ marginTop: "12px" }}
+            >
+              {recoveryMessage}
             </div>
           )}
         </GlassCard>

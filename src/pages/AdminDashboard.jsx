@@ -46,6 +46,7 @@ export default function AdminDashboard() {
   const [adminPassword, setAdminPassword] = useState("1234");
   const [salesEmail, setSalesEmail] = useState("sales@jegnit.com");
   const [salesPassword, setSalesPassword] = useState("1234");
+  const [secretCode, setSecretCode] = useState("JEGNIT-RESET-2026");
   const [credMessage, setCredMessage] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedStats, setSelectedStats] = useState(null);
@@ -60,6 +61,7 @@ export default function AdminDashboard() {
       if (parsed?.admin?.password) setAdminPassword(parsed.admin.password);
       if (parsed?.sales?.email) setSalesEmail(parsed.sales.email);
       if (parsed?.sales?.password) setSalesPassword(parsed.sales.password);
+      if (parsed?.secretCode) setSecretCode(parsed.secretCode);
     } catch {
       // ignore
     }
@@ -71,6 +73,7 @@ export default function AdminDashboard() {
       const payload = {
         admin: { email: adminEmail, password: adminPassword },
         sales: { email: salesEmail, password: salesPassword },
+        secretCode,
       };
       window.localStorage.setItem("jegnit-inventory-credentials-v1", JSON.stringify(payload));
       setCredMessage("Login emails and passwords updated.");
@@ -82,20 +85,22 @@ export default function AdminDashboard() {
 
   return (
     <GlassCard title="Admin Command Center">
-      <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", marginBottom: "20px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", marginBottom: "20px", flexWrap: "wrap" }}>
         <div style={{ fontSize: "13px", color: "var(--black-lighter)" }}>
           High-level snapshot of your inventory, sales and replacements. All numbers auto‑update in real time as sales
           and exchanges are recorded.
         </div>
         <div
           style={{
-            padding: "6px 12px",
+            padding: "4px 10px",
             borderRadius: "999px",
             background: "rgba(255,102,0,0.08)",
             border: "1px solid rgba(255,102,0,0.3)",
             fontSize: "11px",
             fontWeight: 700,
             whiteSpace: "nowrap",
+            alignSelf: "flex-start",
+            maxWidth: "100%",
           }}
         >
           Today {today} • {todaySalesQty} items sold
@@ -224,6 +229,15 @@ export default function AdminDashboard() {
         <div className="form-group">
           <label>Sales Password</label>
           <input type="text" value={salesPassword} onChange={(e) => setSalesPassword(e.target.value)} required />
+        </div>
+        <div className="form-group">
+          <label>Admin Secret Code (for 'Forgot password')</label>
+          <input
+            type="text"
+            value={secretCode}
+            onChange={(e) => setSecretCode(e.target.value)}
+            required
+          />
         </div>
         <div className="form-group">
           <button type="submit">Save Login Details</button>
