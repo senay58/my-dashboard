@@ -7,6 +7,7 @@ import Replacements from "./pages/Replacements.jsx";
 import Reports from "./pages/Reports.jsx";
 import Sales from "./pages/Sales.jsx";
 import SalesDashboard from "./pages/SalesDashboard.jsx";
+import { useInventory } from "./context/InventoryContext.jsx";
 
 const AUTH_KEY = "jegnit-inventory-auth";
 
@@ -83,6 +84,17 @@ export default function App() {
           <div className="sidebar-role-pill">
             <span className="role-dot" />
             Role: {role === "admin" ? "Admin" : "Sales"}
+          </div>
+          
+          {/* Supabase Sync Status */}
+          <div style={{ padding: "0 20px 10px", fontSize: "0.8rem" }}>
+            {useInventory && (() => {
+              const { isSyncing, syncError, supabaseConfigured } = useInventory();
+              if (!supabaseConfigured) return <span style={{ color: "#fdba74" }}>● Local Storage Only</span>;
+              if (syncError) return <span style={{ color: "#fca5a5" }}>● Sync Error</span>;
+              if (isSyncing) return <span className="animate-pulse" style={{ color: "#bfdbfe" }}>● Syncing Cloud...</span>;
+              return <span style={{ color: "#86efac" }}>● Cloud Synced</span>;
+            })()}
           </div>
           <nav>
             {role === "admin" && (
@@ -163,6 +175,15 @@ export default function App() {
               <span />
             </button>
             <div className="mobile-topbar-title">JEGNIT Inventory</div>
+            <div style={{ marginLeft: "auto", marginRight: "10px", fontSize: "0.7rem" }}>
+              {useInventory && (() => {
+                const { isSyncing, syncError, supabaseConfigured } = useInventory();
+                if (!supabaseConfigured) return <span style={{ color: "#fdba74" }}>● Local</span>;
+                if (syncError) return <span style={{ color: "#fca5a5" }}>● Error</span>;
+                if (isSyncing) return <span className="animate-pulse" style={{ color: "#bfdbfe" }}>● Syncing</span>;
+                return <span style={{ color: "#86efac" }}>● Cloud Synced</span>;
+              })()}
+            </div>
           </div>
           <Routes>
             {role === "admin" && (

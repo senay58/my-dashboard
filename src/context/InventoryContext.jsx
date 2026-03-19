@@ -82,15 +82,27 @@ export function InventoryProvider({ children }) {
     })();
   }, [remoteLoaded]);
 
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState(null);
+
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase || !remoteLoaded) return;
     const sync = async () => {
-      const payload = { id: 1, products, sales, replacements };
-      // upsert single row with id=1 to act as app-wide snapshot
-      await supabase.from(REMOTE_TABLE).upsert(payload, { onConflict: "id" });
+      setIsSyncing(true);
+      setSyncError(null);
+      try {
+        const payload = { id: 1, products, sales, replacements };
+        const { error } = await supabase.from(REMOTE_TABLE).upsert(payload, { onConflict: "id" });
+        if (error) throw error;
+      } catch (err) {
+        console.error("Sync error:", err);
+        setSyncError(err.message);
+      } finally {
+        setIsSyncing(false);
+      }
     };
     sync();
-  }, [products, sales, replacements]);
+  }, [products, sales, replacements, remoteLoaded]);
 
   const findProductById = (id) => products.find((p) => p.id === id);
 
@@ -484,6 +496,9 @@ export function InventoryProvider({ children }) {
     getMonthlySummary,
     recordReplacement,
     resetAllData,
+    isSyncing,
+    syncError,
+    supabaseConfigured: !!supabase,
   };
 
   return <InventoryContext.Provider value={value}>{children}</InventoryContext.Provider>;
