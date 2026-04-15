@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route, NavLink, Navigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  NavLink,
+  Navigate,
+} from "react-router-dom";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import Login from "./pages/Login.jsx";
 import Products from "./pages/Products.jsx";
@@ -17,6 +23,19 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // FIX: call useInventory at top level, not inside JSX IIFEs
+  const { isSyncing, syncError, supabaseConfigured } = useInventory();
+
+  // Desktop only: collapse sidebar. On mobile the sidebar is a full drawer.
+  const handleSidebarLogoClick = () => {
+    if (window.innerWidth > 1024) {
+      setSidebarCollapsed((v) => !v);
+    } else {
+      // On mobile clicking the logo inside the open sidebar closes the drawer
+      setSidebarOpen(false);
+    }
+  };
+
   const handleLoginSuccess = (userRole) => {
     setIsLoggedIn(true);
     setRole(userRole);
@@ -27,7 +46,10 @@ export default function App() {
       const raw = window.localStorage.getItem(AUTH_KEY);
       if (!raw) return;
       const parsed = JSON.parse(raw);
-      if (parsed?.isLoggedIn && (parsed?.role === "admin" || parsed?.role === "sales")) {
+      if (
+        parsed?.isLoggedIn &&
+        (parsed?.role === "admin" || parsed?.role === "sales")
+      ) {
         setIsLoggedIn(true);
         setRole(parsed.role);
       }
@@ -38,7 +60,10 @@ export default function App() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(AUTH_KEY, JSON.stringify({ isLoggedIn, role }));
+      window.localStorage.setItem(
+        AUTH_KEY,
+        JSON.stringify({ isLoggedIn, role })
+      );
     } catch {
       // ignore
     }
@@ -54,19 +79,48 @@ export default function App() {
     }
   };
 
+  // Sync status badge — uses hook values directly (no IIFE violation)
+  const syncBadge = !supabaseConfigured ? (
+    <span style={{ color: "#fdba74" }}>● Local Storage Only</span>
+  ) : syncError ? (
+    <span style={{ color: "#fca5a5" }}>● Sync Error</span>
+  ) : isSyncing ? (
+    <span className="animate-pulse" style={{ color: "#bfdbfe" }}>
+      ● Syncing Cloud...
+    </span>
+  ) : (
+    <span style={{ color: "#86efac" }}>● Cloud Synced</span>
+  );
+
+  const syncBadgeMini = !supabaseConfigured ? (
+    <span style={{ color: "#fdba74" }}>● Local</span>
+  ) : syncError ? (
+    <span style={{ color: "#fca5a5" }}>● Error</span>
+  ) : isSyncing ? (
+    <span className="animate-pulse" style={{ color: "#bfdbfe" }}>
+      ● Syncing
+    </span>
+  ) : (
+    <span style={{ color: "#86efac" }}>● Cloud Synced</span>
+  );
+
   if (!isLoggedIn) {
     return <Login onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (
     <Router>
-      <div className={`app ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${sidebarOpen ? "sidebar-open" : ""}`}>
+      <div
+        className={`app ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${
+          sidebarOpen ? "sidebar-open" : ""
+        }`}
+      >
         <aside className={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
           <div className="sidebar-header">
             <button
               type="button"
               className="logo logo-button"
-              onClick={() => setSidebarCollapsed((v) => !v)}
+              onClick={handleSidebarLogoClick}
             >
               <img
                 src="/logo.png"
@@ -78,24 +132,17 @@ export default function App() {
               <div className="logo-text">JEGNIT</div>
             </button>
           </div>
-          <div className="sidebar-subtitle">
-            Inventory Tracking System
-          </div>
+          <div className="sidebar-subtitle">Inventory Tracking System</div>
           <div className="sidebar-role-pill">
             <span className="role-dot" />
             Role: {role === "admin" ? "Admin" : "Sales"}
           </div>
-          
-          {/* Supabase Sync Status */}
+
+          {/* Sync status — uses top-level hook values, no violations */}
           <div style={{ padding: "0 20px 10px", fontSize: "0.8rem" }}>
-            {useInventory && (() => {
-              const { isSyncing, syncError, supabaseConfigured } = useInventory();
-              if (!supabaseConfigured) return <span style={{ color: "#fdba74" }}>● Local Storage Only</span>;
-              if (syncError) return <span style={{ color: "#fca5a5" }}>● Sync Error</span>;
-              if (isSyncing) return <span className="animate-pulse" style={{ color: "#bfdbfe" }}>● Syncing Cloud...</span>;
-              return <span style={{ color: "#86efac" }}>● Cloud Synced</span>;
-            })()}
+            {syncBadge}
           </div>
+
           <nav>
             {role === "admin" && (
               <>
@@ -114,7 +161,7 @@ export default function App() {
                   onClick={() => setSidebarOpen(false)}
                 >
                   <span className="nav-dot" />
-                  <span className="nav-label">Products & Stock</span>
+                  <span className="nav-label">Products &amp; Stock</span>
                 </NavLink>
                 <NavLink
                   to="/reports"
@@ -161,28 +208,31 @@ export default function App() {
             </button>
           </div>
         </aside>
-        {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
+        {sidebarOpen && (
+          <div
+            className="sidebar-overlay"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
 
         <main className="main">
           <div className="mobile-topbar">
+            {/* Logo replaces burger — tapping it opens the sidebar drawer */}
             <button
               type="button"
-              className="mobile-menu-toggle btn-icon"
+              className="mobile-topbar-logo-btn"
               onClick={() => setSidebarOpen((v) => !v)}
+              aria-label="Open navigation menu"
             >
-              <span />
-              <span />
-              <span />
+              <img
+                src="/logo.png"
+                alt="JEGNIT"
+                onError={(e) => { e.target.style.display = "none"; }}
+              />
+              <span className="mobile-topbar-logo-text">JEGNIT</span>
             </button>
-            <div className="mobile-topbar-title">JEGNIT Inventory</div>
-            <div style={{ marginLeft: "auto", marginRight: "10px", fontSize: "0.7rem" }}>
-              {useInventory && (() => {
-                const { isSyncing, syncError, supabaseConfigured } = useInventory();
-                if (!supabaseConfigured) return <span style={{ color: "#fdba74" }}>● Local</span>;
-                if (syncError) return <span style={{ color: "#fca5a5" }}>● Error</span>;
-                if (isSyncing) return <span className="animate-pulse" style={{ color: "#bfdbfe" }}>● Syncing</span>;
-                return <span style={{ color: "#86efac" }}>● Cloud Synced</span>;
-              })()}
+            <div style={{ marginLeft: "auto", marginRight: "4px", fontSize: "0.7rem" }}>
+              {syncBadgeMini}
             </div>
           </div>
           <Routes>

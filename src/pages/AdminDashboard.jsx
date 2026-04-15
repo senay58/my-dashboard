@@ -4,7 +4,10 @@ import "../index.css";
 import { useInventory } from "../context/InventoryContext.jsx";
 
 export default function AdminDashboard() {
-  const { products, sales, replacements, getMonthlySummary, resetAllData } = useInventory();
+  const { products, sales, replacements, transfers, getMonthlySummary, resetAllData } = useInventory();
+
+  const pendingTransfers = transfers.filter((t) => t.status === "pending").length;
+  const confirmedTransfers = transfers.filter((t) => t.status === "confirmed").length;
 
   const totalProducts = products.length;
   const totalMain = useMemo(
@@ -232,6 +235,30 @@ export default function AdminDashboard() {
           <div className="info-box-footer">
             Completed exchange transactions with price differences tracked.
           </div>
+        </div>
+      </div>
+
+      <div className="grid-3" style={{ marginTop: "16px" }}>
+        <div className="info-box info-box-secondary" style={{ borderColor: pendingTransfers > 0 ? "rgba(255,152,0,0.5)" : undefined }}>
+          <div className="info-box-label">Pending Transfers</div>
+          <div className="info-box-value" style={{ color: pendingTransfers > 0 ? "#ffb74d" : undefined }}>
+            {pendingTransfers}
+          </div>
+          <div className="info-box-footer">
+            {pendingTransfers > 0
+              ? "Awaiting sales person confirmation."
+              : "All transfers confirmed by sales staff."}
+          </div>
+        </div>
+        <div className="info-box info-box-secondary">
+          <div className="info-box-label">Confirmed Transfers</div>
+          <div className="info-box-value">{confirmedTransfers}</div>
+          <div className="info-box-footer">Total transfers confirmed by sales staff.</div>
+        </div>
+        <div className="info-box info-box-secondary">
+          <div className="info-box-label">Total Transfers</div>
+          <div className="info-box-value">{transfers.length}</div>
+          <div className="info-box-footer">All stock movements from Main → Shop.</div>
         </div>
       </div>
 

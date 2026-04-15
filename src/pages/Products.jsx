@@ -3,9 +3,17 @@ import GlassCard from "../components/GlassCard.jsx";
 import { useInventory } from "../context/InventoryContext.jsx";
 
 export default function Products() {
-  const { products, addOrUpdateProductSize, updateProductSize, transferStock, deleteProduct, deleteProductSize } =
-    useInventory();
+  const {
+    products,
+    transfers,
+    addOrUpdateProductSize,
+    updateProductSize,
+    requestTransfer,
+    deleteProduct,
+    deleteProductSize,
+  } = useInventory();
 
+  // ─── Add / Edit form state ──────────────────────────────────────────────────
   const [name, setName] = useState("");
   const [size, setSize] = useState("");
   const [price, setPrice] = useState("");
@@ -13,10 +21,18 @@ export default function Products() {
   const [addShopQty, setAddShopQty] = useState("");
   const [message, setMessage] = useState("");
   const [editing, setEditing] = useState(null);
+
+  // ─── Transfer form state ────────────────────────────────────────────────────
   const [transferProductId, setTransferProductId] = useState("");
   const [transferSizeId, setTransferSizeId] = useState("");
   const [transferQty, setTransferQty] = useState("");
+  const [transferMessage, setTransferMessage] = useState("");
+  const [transferError, setTransferError] = useState("");
 
+  // ─── Transfer history filter ────────────────────────────────────────────────
+  const [historyFilter, setHistoryFilter] = useState("all"); // "all" | "pending" | "confirmed"
+
+  // ─── Derived data ───────────────────────────────────────────────────────────
   const rows = useMemo(() => {
     const out = [];
     for (const p of products) {
@@ -43,6 +59,32 @@ export default function Products() {
     return map;
   }, [products]);
 
+  const selectedProductForTransfer = products.find(
+    (p) => p.id === transferProductId
+  );
+
+  const filteredTransfers = useMemo(() => {
+    const sorted = [...transfers].sort((a, b) =>
+      b.createdAt > a.createdAt ? 1 : -1
+    );
+    if (historyFilter === "pending") return sorted.filter((t) => t.status === "pending");
+    if (historyFilter === "confirmed") return sorted.filter((t) => t.status === "confirmed");
+    return sorted;
+  }, [transfers, historyFilter]);
+
+  const pendingCount = transfers.filter((t) => t.status === "pending").length;
+
+  // ─── Handlers ───────────────────────────────────────────────────────────────
+
+  const clearAddForm = () => {
+    // FIX: name was previously not cleared after submit
+    setName("");
+    setSize("");
+    setPrice("");
+    setAddMainQty("");
+    setAddShopQty("");
+  };
+
   const onSubmit = (e) => {
     e.preventDefault();
     setMessage("");
@@ -53,11 +95,9 @@ export default function Products() {
       addMainQty: Number(addMainQty),
       addShopQty: Number(addShopQty),
     });
-    setMessage("Product saved.");
-    setSize("");
-    setPrice("");
-    setAddMainQty("");
-    setAddShopQty("");
+    setMessage("Product saved successfully.");
+    clearAddForm();
+    setTimeout(() => setMessage(""), 3000);
   };
 
   const startEdit = (product, sizeRow) => {
@@ -71,11 +111,7 @@ export default function Products() {
 
   const cancelEdit = () => {
     setEditing(null);
-    setName("");
-    setSize("");
-    setPrice("");
-    setAddMainQty("");
-    setAddShopQty("");
+    clearAddForm();
   };
 
   const saveEdit = (e) => {
@@ -92,34 +128,42 @@ export default function Products() {
     });
     setMessage("Product updated.");
     cancelEdit();
+    setTimeout(() => setMessage(""), 3000);
   };
 
   const handleTransfer = (e) => {
     e.preventDefault();
-    setMessage("");
+    setTransferMessage("");
+    setTransferError("");
     try {
-      transferStock({
+      requestTransfer({
         productId: transferProductId,
         sizeId: transferSizeId,
         qty: Number(transferQty),
       });
-      setMessage("Stock transferred successfully.");
+      setTransferMessage(
+        `Transfer request created. ${transferQty} unit(s) deducted from Main stock — awaiting sales confirmation.`
+      );
       setTransferProductId("");
       setTransferSizeId("");
       setTransferQty("");
+      setTimeout(() => setTransferMessage(""), 5000);
     } catch (error) {
-      setMessage(`Error: ${error.message}`);
+      setTransferError(`Error: ${error.message}`);
+      setTimeout(() => setTransferError(""), 4000);
     }
   };
 
-  const selectedProductForTransfer = products.find((p) => p.id === transferProductId);
-
+  // ─── Render ─────────────────────────────────────────────────────────────────
   return (
-    <GlassCard title="Products & Stock Management (Admin)">
+    <GlassCard title="Products &amp; Stock Management (Admin)">
       <div className="alert alert-info">
-        Admin can add/edit products, manage main stock and shop stock, and transfer items from main to shop stock.
+        Admin can add/edit products, manage stock levels, and request stock
+        transfers from Main to Shop. Sales staff must confirm receipt before
+        shop stock is updated.
       </div>
 
+      {/* ── Add / Edit Form ── */}
       {editing ? (
         <form onSubmit={saveEdit} className="form-grid">
           <div className="form-group">
@@ -131,7 +175,7 @@ export default function Products() {
             <input value={size} onChange={(e) => setSize(e.target.value)} required />
           </div>
           <div className="form-group">
-            <label>Price</label>
+            <label>Price (ETB)</label>
             <input
               type="number"
               value={price}
@@ -142,10 +186,16 @@ export default function Products() {
             />
           </div>
           <div className="form-group">
-            <button type="submit" className="btn-small">Save Changes</button>
+            <button type="submit" className="btn-small">
+              Save Changes
+            </button>
           </div>
           <div className="form-group">
-            <button type="button" className="btn-small btn-secondary" onClick={cancelEdit}>
+            <button
+              type="button"
+              className="btn-small btn-secondary"
+              onClick={cancelEdit}
+            >
               Cancel
             </button>
           </div>
@@ -154,14 +204,24 @@ export default function Products() {
         <form onSubmit={onSubmit} className="form-grid">
           <div className="form-group">
             <label>Product Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Product 1" required />
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Product 1"
+              required
+            />
           </div>
           <div className="form-group">
             <label>Size</label>
-            <input value={size} onChange={(e) => setSize(e.target.value)} placeholder="e.g. S / M / 1L" required />
+            <input
+              value={size}
+              onChange={(e) => setSize(e.target.value)}
+              placeholder="e.g. S / M / 1L"
+              required
+            />
           </div>
           <div className="form-group">
-            <label>Price</label>
+            <label>Price (ETB)</label>
             <input
               type="number"
               value={price}
@@ -199,11 +259,40 @@ export default function Products() {
       )}
 
       {message && (
-        <div className={`alert ${message.includes("Error") ? "alert-error" : "alert-success"}`}>{message}</div>
+        <div
+          className={`alert ${
+            message.includes("Error") ? "alert-error" : "alert-success"
+          }`}
+        >
+          {message}
+        </div>
       )}
 
+      {/* ── Transfer Request Section ── */}
       <div className="transfer-section">
-        <h4>Transfer Stock: Main → Shop</h4>
+        <h4>
+          Request Transfer: Main Stock → Shop Stock
+          {pendingCount > 0 && (
+            <span
+              style={{
+                marginLeft: "10px",
+                background: "#ff6600",
+                color: "#fff",
+                borderRadius: "999px",
+                padding: "2px 10px",
+                fontSize: "12px",
+                fontWeight: 700,
+              }}
+            >
+              {pendingCount} pending
+            </span>
+          )}
+        </h4>
+        <div className="alert alert-info" style={{ fontSize: "13px" }}>
+          When you submit, the items are deducted from Main stock and a pending
+          transfer is created. The sales person must confirm receipt before the
+          Shop stock is updated.
+        </div>
         <form onSubmit={handleTransfer} className="form-grid">
           <div className="form-group">
             <label>Product</label>
@@ -234,7 +323,8 @@ export default function Products() {
               <option value="">Select size</option>
               {(selectedProductForTransfer?.sizes || []).map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.size} (Main: {s.mainStockQty || 0})
+                  {s.size} — Main: {Number(s.mainStockQty || 0)} | Shop:{" "}
+                  {Number(s.shopStockQty || 0)}
                 </option>
               ))}
             </select>
@@ -251,11 +341,112 @@ export default function Products() {
             />
           </div>
           <div className="form-group">
-            <button type="submit" className="btn-small">Transfer</button>
+            <button type="submit" className="btn-small">
+              Create Transfer Request
+            </button>
           </div>
         </form>
+        {transferMessage && (
+          <div className="alert alert-success" style={{ marginTop: "8px" }}>
+            {transferMessage}
+          </div>
+        )}
+        {transferError && (
+          <div className="alert alert-error" style={{ marginTop: "8px" }}>
+            {transferError}
+          </div>
+        )}
       </div>
 
+      {/* ── Transfer History ── */}
+      <h3 style={{ marginTop: "32px", marginBottom: "8px", color: "var(--orange)" }}>
+        Transfer History
+      </h3>
+      <div style={{ marginBottom: "12px", display: "flex", gap: "8px" }}>
+        {["all", "pending", "confirmed"].map((f) => (
+          <button
+            key={f}
+            type="button"
+            className={`btn-small ${historyFilter === f ? "" : "btn-secondary"}`}
+            onClick={() => setHistoryFilter(f)}
+          >
+            {f === "all" ? "All" : f === "pending" ? "⏳ Pending" : "✅ Confirmed"}
+          </button>
+        ))}
+      </div>
+      <div className="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Product</th>
+              <th>Size</th>
+              <th>Qty</th>
+              <th>Status</th>
+              <th>Confirmed At</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredTransfers.length === 0 && (
+              <tr>
+                <td
+                  colSpan="6"
+                  style={{ textAlign: "center", color: "var(--black-lighter)" }}
+                >
+                  No transfer records found.
+                </td>
+              </tr>
+            )}
+            {filteredTransfers.map((t) => (
+              <tr key={t.id}>
+                <td>{t.date}</td>
+                <td>{t.productName}</td>
+                <td>{t.size}</td>
+                <td>{t.qty}</td>
+                <td>
+                  {t.status === "pending" ? (
+                    <span
+                      style={{
+                        background: "rgba(255,152,0,0.18)",
+                        color: "#ffb74d",
+                        borderRadius: "999px",
+                        padding: "2px 10px",
+                        fontWeight: 700,
+                        fontSize: "12px",
+                      }}
+                    >
+                      ⏳ Pending
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        background: "rgba(76,175,80,0.18)",
+                        color: "#81c784",
+                        borderRadius: "999px",
+                        padding: "2px 10px",
+                        fontWeight: 700,
+                        fontSize: "12px",
+                      }}
+                    >
+                      ✅ Confirmed
+                    </span>
+                  )}
+                </td>
+                <td style={{ fontSize: "12px", color: "var(--black-lighter)" }}>
+                  {t.confirmedAt
+                    ? new Date(t.confirmedAt).toLocaleString()
+                    : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ── Products Table ── */}
+      <h3 style={{ marginTop: "32px", marginBottom: "12px", color: "var(--orange)" }}>
+        Product Inventory
+      </h3>
       <div className="table-wrapper">
         <table>
           <thead>
@@ -271,7 +462,10 @@ export default function Products() {
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan="6" style={{ textAlign: "center", color: "var(--black-lighter)" }}>
+                <td
+                  colSpan="6"
+                  style={{ textAlign: "center", color: "var(--black-lighter)" }}
+                >
                   No products yet. Add your first product above.
                 </td>
               </tr>
@@ -301,7 +495,7 @@ export default function Products() {
                       type="button"
                       className="btn-small btn-secondary"
                       onClick={() => startEdit(product, sizeRow)}
-                      style={{ marginRight: "8px" }}
+                      style={{ marginRight: "6px" }}
                     >
                       Edit
                     </button>
@@ -309,12 +503,16 @@ export default function Products() {
                       type="button"
                       className="btn-small btn-secondary"
                       onClick={() => deleteProductSize(product.id, sizeRow.id)}
-                      style={{ marginRight: "8px" }}
+                      style={{ marginRight: "6px" }}
                     >
-                      Delete Size
+                      Del Size
                     </button>
-                    <button type="button" className="btn-small btn-danger" onClick={() => deleteProduct(product.id)}>
-                      Delete Product
+                    <button
+                      type="button"
+                      className="btn-small btn-danger"
+                      onClick={() => deleteProduct(product.id)}
+                    >
+                      Del All
                     </button>
                   </td>
                 </tr>
