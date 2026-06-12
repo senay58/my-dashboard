@@ -12,7 +12,9 @@ import Products from "./pages/Products.jsx";
 import Replacements from "./pages/Replacements.jsx";
 import Reports from "./pages/Reports.jsx";
 import Sales from "./pages/Sales.jsx";
-import SalesDashboard from "./pages/SalesDashboard.jsx";
+import SalesOverview from "./pages/SalesOverview.jsx";
+import Settings from "./pages/Settings.jsx";
+import Transfers from "./pages/Transfers.jsx";
 import { useInventory } from "./context/InventoryContext.jsx";
 
 const AUTH_KEY = "jegnit-inventory-auth";
@@ -179,6 +181,14 @@ export default function App() {
                   <span className="nav-dot" />
                   <span className="nav-label">Replacements</span>
                 </NavLink>
+                <NavLink
+                  to="/settings"
+                  className={({ isActive }) => (isActive ? "active" : "")}
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <span className="nav-dot" />
+                  <span className="nav-label">⚙ Settings</span>
+                </NavLink>
               </>
             )}
             {role === "sales" && (
@@ -192,12 +202,20 @@ export default function App() {
                   <span className="nav-label">Sales Entry</span>
                 </NavLink>
                 <NavLink
-                  to="/sales-dashboard"
+                  to="/sales-overview"
                   className={({ isActive }) => (isActive ? "active" : "")}
                   onClick={() => setSidebarOpen(false)}
                 >
                   <span className="nav-dot" />
-                  <span className="nav-label">Sales Dashboard</span>
+                  <span className="nav-label">Sales Overview</span>
+                </NavLink>
+                <NavLink
+                  to="/transfers"
+                  className={({ isActive }) => (isActive ? "active" : "")}
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <span className="nav-dot" />
+                  <span className="nav-label">Transfers</span>
                 </NavLink>
               </>
             )}
@@ -242,18 +260,22 @@ export default function App() {
                 <Route path="/products" element={<Products />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/replacements" element={<Replacements />} />
+                <Route path="/settings" element={<Settings />} />
                 <Route path="/sales" element={<Navigate to="/" />} />
-                <Route path="/sales-dashboard" element={<Navigate to="/" />} />
+                <Route path="/sales-overview" element={<Navigate to="/" />} />
+                <Route path="/sales-dashboard" element={<Navigate to="/sales-overview" />} />
               </>
             )}
             {role === "sales" && (
               <>
                 <Route path="/sales" element={<Sales />} />
-                <Route path="/sales-dashboard" element={<SalesDashboard />} />
+                <Route path="/sales-overview" element={<SalesOverview />} />
+                <Route path="/transfers" element={<Transfers />} />
                 <Route path="/" element={<Navigate to="/sales" />} />
                 <Route path="/products" element={<Navigate to="/sales" />} />
                 <Route path="/reports" element={<Navigate to="/sales" />} />
                 <Route path="/replacements" element={<Navigate to="/sales" />} />
+                <Route path="/sales-dashboard" element={<Navigate to="/sales-overview" />} />
               </>
             )}
           </Routes>

@@ -32,16 +32,28 @@ export default function Products() {
   // ─── Transfer history filter ────────────────────────────────────────────────
   const [historyFilter, setHistoryFilter] = useState("all"); // "all" | "pending" | "confirmed"
 
-  // ─── Derived data ───────────────────────────────────────────────────────────
-  const rows = useMemo(() => {
-    const out = [];
-    for (const p of products) {
-      for (const s of p.sizes || []) {
-        out.push({ product: p, sizeRow: s });
+  // ─── Accordion Expansion State & Logic ──────────────────────────────────────
+  const [expandedProductIds, setExpandedProductIds] = useState({});
+  const [lastAddedName, setLastAddedName] = useState("");
+
+  React.useEffect(() => {
+    if (lastAddedName) {
+      const found = products.find(
+        (p) => p.name.toLowerCase() === lastAddedName.toLowerCase()
+      );
+      if (found) {
+        setExpandedProductIds((prev) => ({ ...prev, [found.id]: true }));
+        setLastAddedName("");
       }
     }
-    return out;
-  }, [products]);
+  }, [products, lastAddedName]);
+
+  const toggleExpand = (productId) => {
+    setExpandedProductIds((prev) => ({
+      ...prev,
+      [productId]: !prev[productId],
+    }));
+  };
 
   const totals = useMemo(() => {
     const map = new Map();
@@ -95,6 +107,7 @@ export default function Products() {
       addMainQty: Number(addMainQty),
       addShopQty: Number(addShopQty),
     });
+    setLastAddedName(name); // Auto-expand on addition
     setMessage("Product saved successfully.");
     clearAddForm();
     setTimeout(() => setMessage(""), 3000);
@@ -126,6 +139,7 @@ export default function Products() {
       mainStockQty: editing.sizeRow.mainStockQty,
       shopStockQty: editing.sizeRow.shopStockQty,
     });
+    setLastAddedName(name); // Keep auto-expanded
     setMessage("Product updated.");
     cancelEdit();
     setTimeout(() => setMessage(""), 3000);
@@ -451,16 +465,16 @@ export default function Products() {
         <table>
           <thead>
             <tr>
-              <th>Product</th>
-              <th>Size</th>
-              <th>Price</th>
-              <th>Main Stock</th>
-              <th>Shop Stock</th>
-              <th style={{ width: "280px" }}>Actions</th>
+              <th style={{ width: "40px" }}></th>
+              <th>Product Model</th>
+              <th>Sizes Count</th>
+              <th>Total Main Stock</th>
+              <th>Total Shop Stock</th>
+              <th style={{ width: "200px", textAlign: "right" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 && (
+            {products.length === 0 && (
               <tr>
                 <td
                   colSpan="6"
@@ -470,52 +484,125 @@ export default function Products() {
                 </td>
               </tr>
             )}
-            {rows.map(({ product, sizeRow }) => {
+            {products.map((product) => {
               const t = totals.get(product.id) || { main: 0, shop: 0 };
+              const isExpanded = !!expandedProductIds[product.id];
+              const sizes = product.sizes || [];
+
               return (
-                <tr key={sizeRow.id}>
-                  <td>
-                    <div style={{ fontWeight: 900 }}>{product.name}</div>
-                    <div style={{ fontSize: "12px", color: "var(--black-lighter)" }}>
-                      Totals — Main: {t.main} | Shop: {t.shop}
-                    </div>
-                  </td>
-                  <td>{sizeRow.size}</td>
-                  <td>
-                    ETB{" "}
-                    {Number(sizeRow.price || 0).toLocaleString("en-ET", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                  <td>{Number(sizeRow.mainStockQty || 0)}</td>
-                  <td>{Number(sizeRow.shopStockQty || 0)}</td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btn-small btn-secondary"
-                      onClick={() => startEdit(product, sizeRow)}
-                      style={{ marginRight: "6px" }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-small btn-secondary"
-                      onClick={() => deleteProductSize(product.id, sizeRow.id)}
-                      style={{ marginRight: "6px" }}
-                    >
-                      Del Size
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-small btn-danger"
-                      onClick={() => deleteProduct(product.id)}
-                    >
-                      Del All
-                    </button>
-                  </td>
-                </tr>
+                <React.Fragment key={product.id}>
+                  {/* Master Clickable Row */}
+                  <tr
+                    onClick={() => toggleExpand(product.id)}
+                    style={{
+                      cursor: "pointer",
+                      background: isExpanded ? "rgba(255, 102, 0, 0.04)" : "inherit",
+                      transition: "background 0.2s ease",
+                    }}
+                    className="product-master-row"
+                  >
+                    <td style={{ textAlign: "center", fontSize: "12px", color: "var(--orange)" }}>
+                      {isExpanded ? "▼" : "▶"}
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 900, fontSize: "15px" }}>{product.name}</div>
+                    </td>
+                    <td>
+                      <span className="low-stock-badge" style={{ background: "rgba(255, 102, 0, 0.08)", color: "var(--orange-dark)", borderColor: "rgba(255, 102, 0, 0.2)" }}>
+                        {sizes.length} {sizes.length === 1 ? "Size" : "Sizes"}
+                      </span>
+                    </td>
+                    <td style={{ fontWeight: 700 }}>{t.main}</td>
+                    <td style={{ fontWeight: 700 }}>{t.shop}</td>
+                    <td style={{ textAlign: "right" }} onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="btn-small btn-danger"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Are you sure you want to delete the model "${product.name}" and ALL its sizes?`
+                            )
+                          ) {
+                            deleteProduct(product.id);
+                          }
+                        }}
+                      >
+                        Delete Model
+                      </button>
+                    </td>
+                  </tr>
+
+                  {/* Detail Expanded Row */}
+                  {isExpanded && (
+                    <tr style={{ background: "rgba(0, 0, 0, 0.02)" }}>
+                      <td colSpan="6" style={{ padding: "16px 24px" }}>
+                        <div
+                          style={{
+                            border: "1px solid rgba(255, 102, 0, 0.15)",
+                            borderRadius: "8px",
+                            overflow: "hidden",
+                            background: "rgba(255, 255, 255, 0.6)",
+                            boxShadow: "inset 0 2px 8px rgba(0, 0, 0, 0.05)",
+                          }}
+                        >
+                          <table style={{ width: "100%", borderCollapse: "collapse", background: "transparent" }}>
+                            <thead>
+                              <tr style={{ background: "rgba(255, 102, 0, 0.08)" }}>
+                                <th style={{ background: "transparent", color: "var(--orange-dark)", padding: "8px 12px", fontSize: "12px", width: "15%" }}>Size</th>
+                                <th style={{ background: "transparent", color: "var(--orange-dark)", padding: "8px 12px", fontSize: "12px", width: "25%" }}>Price</th>
+                                <th style={{ background: "transparent", color: "var(--orange-dark)", padding: "8px 12px", fontSize: "12px", width: "20%" }}>Main Stock</th>
+                                <th style={{ background: "transparent", color: "var(--orange-dark)", padding: "8px 12px", fontSize: "12px", width: "20%" }}>Shop Stock</th>
+                                <th style={{ background: "transparent", color: "var(--orange-dark)", padding: "8px 12px", fontSize: "12px", width: "20%", textAlign: "right" }}>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sizes.length === 0 ? (
+                                <tr>
+                                  <td colSpan="5" style={{ textAlign: "center", color: "var(--black-lighter)", padding: "12px" }}>
+                                    No sizes added to this model yet.
+                                  </td>
+                                </tr>
+                              ) : (
+                                sizes.map((sizeRow) => (
+                                  <tr key={sizeRow.id} style={{ borderBottom: "1px solid rgba(0, 0, 0, 0.05)" }}>
+                                    <td style={{ padding: "8px 12px", fontWeight: 700 }}>{sizeRow.size}</td>
+                                    <td style={{ padding: "8px 12px" }}>
+                                      ETB{" "}
+                                      {Number(sizeRow.price || 0).toLocaleString("en-ET", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                    </td>
+                                    <td style={{ padding: "8px 12px" }}>{Number(sizeRow.mainStockQty || 0)}</td>
+                                    <td style={{ padding: "8px 12px" }}>{Number(sizeRow.shopStockQty || 0)}</td>
+                                    <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                                      <button
+                                        type="button"
+                                        className="btn-small btn-secondary"
+                                        onClick={() => startEdit(product, sizeRow)}
+                                        style={{ marginRight: "6px" }}
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn-small btn-secondary"
+                                        onClick={() => deleteProductSize(product.id, sizeRow.id)}
+                                      >
+                                        Del Size
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               );
             })}
           </tbody>

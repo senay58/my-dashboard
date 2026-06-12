@@ -100,7 +100,7 @@ export default function Reports() {
           <h2>Sales Detail (Every Recorded Sale)</h2>
           <table>
             <thead>
-              <tr><th>Date</th><th>Product</th><th>Size</th><th>Qty</th><th>Total (ETB)</th><th>Payment</th><th>Delivery</th></tr>
+              <tr><th>Date</th><th>Product</th><th>Size</th><th>Qty</th><th>Total (ETB)</th><th>Payment</th><th>Ref. Number</th><th>Delivery</th></tr>
             </thead>
             <tbody>
               ${allSales
@@ -111,7 +111,7 @@ export default function Reports() {
                     ).toLocaleString("en-ET", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
-                    })}</td><td>${s.paymentMethod}</td><td>${s.deliveryType}</td></tr>`
+                    })}</td><td>${s.paymentMethod}</td><td>${s.refNum || "—"}</td><td>${s.deliveryType}</td></tr>`
                 )
                 .join("")}
             </tbody>
@@ -263,13 +263,14 @@ export default function Reports() {
               <th>Qty</th>
               <th>Total (ETB)</th>
               <th>Payment</th>
+              <th>Ref. Number</th>
               <th>Delivery</th>
             </tr>
           </thead>
           <tbody>
             {filteredSales.length === 0 && (
               <tr>
-                <td colSpan="7" style={{ textAlign: "center", color: "var(--black-lighter)" }}>
+                <td colSpan="8" style={{ textAlign: "center", color: "var(--black-lighter)" }}>
                   No results for selected filters.
                 </td>
               </tr>
@@ -288,6 +289,15 @@ export default function Reports() {
                   })}
                 </td>
                 <td>{s.paymentMethod}</td>
+                <td>
+                  {s.refNum ? (
+                    <span style={{ fontFamily: "monospace", fontSize: "12px", background: "rgba(0,0,0,0.05)", padding: "2px 6px", borderRadius: "4px" }}>
+                      {s.refNum}
+                    </span>
+                  ) : (
+                    <span style={{ color: "var(--black-lighter)", fontStyle: "italic" }}>—</span>
+                  )}
+                </td>
                 <td>{s.deliveryType}</td>
               </tr>
             ))}

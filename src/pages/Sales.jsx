@@ -6,9 +6,7 @@ export default function Sales() {
   const {
     products,
     sales,
-    transfers,
     recordSale,
-    confirmTransfer,
     PAYMENT_METHODS,
     DELIVERY_TYPES,
     getLowStockItems,
@@ -21,13 +19,32 @@ export default function Sales() {
   const [qty, setQty] = useState("");
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0]);
   const [deliveryType, setDeliveryType] = useState(DELIVERY_TYPES[0]);
+  const [refNum, setRefNum] = useState("");
   const [ok, setOk] = useState("");
   const [err, setErr] = useState("");
 
-  // ─── Transfer confirmation state ────────────────────────────────────────────
-  const [confirmingId, setConfirmingId] = useState(null);
-  const [confirmOk, setConfirmOk] = useState("");
-  const [confirmErr, setConfirmErr] = useState("");
+  // ─── Accordion expansion state ───────────────────────────────────────────────
+  const [expandedProductIds, setExpandedProductIds] = useState({});
+
+  const toggleExpand = (productId) => {
+    setExpandedProductIds((prev) => ({
+      ...prev,
+      [productId]: !prev[productId],
+    }));
+  };
+
+  // ─── Shop totals calculation ────────────────────────────────────────────────
+  const totals = useMemo(() => {
+    const map = new Map();
+    products.forEach((p) => {
+      let shop = 0;
+      (p.sizes || []).forEach((s) => {
+        shop += Number(s.shopStockQty) || 0;
+      });
+      map.set(p.id, shop);
+    });
+    return map;
+  }, [products]);
 
   // ─── Low stock alerts ───────────────────────────────────────────────────────
   const [lowStockAlerts, setLowStockAlerts] = useState([]);
@@ -46,15 +63,6 @@ export default function Sales() {
     setLowStockAlerts(getLowStockItems());
   }, [products, getLowStockItems]);
 
-  // Pending transfers (newest first)
-  const pendingTransfers = useMemo(
-    () =>
-      [...transfers]
-        .filter((t) => t.status === "pending")
-        .sort((a, b) => (b.createdAt > a.createdAt ? 1 : -1)),
-    [transfers]
-  );
-
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
   const onSubmit = (e) => {
@@ -67,6 +75,9 @@ export default function Sales() {
       if (shopQty === 0) throw new Error("Shop stock is zero. Cannot make sale.");
       if (shopQty < Number(qty))
         throw new Error(`Only ${shopQty} items available in shop stock.`);
+      if (paymentMethod !== "Cash" && !refNum.trim()) {
+        throw new Error("Reference number is required for bank/digital transfers.");
+      }
       recordSale({
         date,
         productId,
@@ -74,9 +85,11 @@ export default function Sales() {
         qty: Number(qty),
         paymentMethod,
         deliveryType,
+        refNum,
       });
       setOk("Sale recorded. Shop stock updated.");
       setQty("");
+      setRefNum("");
       setTimeout(() => setOk(""), 3000);
     } catch (error) {
       setErr(error?.message || "Could not record sale.");
@@ -84,164 +97,11 @@ export default function Sales() {
     }
   };
 
-  const handleConfirmTransfer = (transferId, transferQty, productName, sizeName) => {
-    setConfirmingId(transferId);
-    setConfirmOk("");
-    setConfirmErr("");
-
-    const confirmed = window.confirm(
-      `CONFIRM STOCK RECEIPT\n\n` +
-        `Product: ${productName} (${sizeName})\n` +
-        `Quantity: ${transferQty} unit(s)\n\n` +
-        `By confirming, you certify that you have physically counted and received all ${transferQty} unit(s). ` +
-        `This action will add them to Shop stock and cannot be undone.\n\n` +
-        `Confirm receipt?`
-    );
-
-    if (!confirmed) {
-      setConfirmingId(null);
-      return;
-    }
-
-    try {
-      confirmTransfer(transferId);
-      setConfirmOk(
-        `✅ Confirmed! ${transferQty} unit(s) of ${productName} (${sizeName}) added to Shop stock.`
-      );
-      setTimeout(() => setConfirmOk(""), 5000);
-    } catch (error) {
-      setConfirmErr(error?.message || "Could not confirm transfer.");
-      setTimeout(() => setConfirmErr(""), 4000);
-    } finally {
-      setConfirmingId(null);
-    }
-  };
-
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <GlassCard title="Sales Entry (Shop Stock — Sales Person)">
 
-      {/* ════════════════════════════════════════════════════════════════════════
-          SECTION 1 — PENDING TRANSFERS (action required)
-          ════════════════════════════════════════════════════════════════════════ */}
-      {pendingTransfers.length > 0 && (
-        <div
-          style={{
-            border: "2px solid rgba(255,152,0,0.6)",
-            borderRadius: "12px",
-            padding: "20px",
-            marginBottom: "28px",
-            background: "rgba(255,152,0,0.06)",
-          }}
-        >
-          <h3
-            style={{
-              margin: "0 0 6px 0",
-              color: "#ffb74d",
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-            }}
-          >
-            <span
-              style={{
-                background: "#ff6600",
-                color: "#fff",
-                borderRadius: "999px",
-                padding: "2px 10px",
-                fontSize: "13px",
-                fontWeight: 900,
-              }}
-            >
-              {pendingTransfers.length}
-            </span>
-            Pending Stock Transfers — Confirmation Required
-          </h3>
-          <p style={{ margin: "0 0 16px 0", fontSize: "13px", color: "var(--black-lighter)" }}>
-            The Admin has dispatched the following items from Main stock. Please
-            physically count and verify receipt, then press{" "}
-            <strong>Confirm Receipt</strong>. Shop stock will only be updated
-            after your confirmation.
-          </p>
 
-          <div className="table-wrapper" style={{ marginBottom: "12px" }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Product</th>
-                  <th>Size</th>
-                  <th>Units Dispatched</th>
-                  <th style={{ width: "200px" }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingTransfers.map((t) => (
-                  <tr key={t.id}>
-                    <td>{t.date}</td>
-                    <td>
-                      <strong>{t.productName}</strong>
-                    </td>
-                    <td>{t.size}</td>
-                    <td>
-                      <span
-                        style={{
-                          fontWeight: 900,
-                          fontSize: "18px",
-                          color: "#ffb74d",
-                        }}
-                      >
-                        {t.qty}
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn-small"
-                        disabled={confirmingId === t.id}
-                        onClick={() =>
-                          handleConfirmTransfer(
-                            t.id,
-                            t.qty,
-                            t.productName,
-                            t.size
-                          )
-                        }
-                        style={{
-                          background: "rgba(76,175,80,0.85)",
-                          border: "none",
-                          color: "#fff",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {confirmingId === t.id ? "Processing…" : "✓ Confirm Receipt"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {confirmOk && (
-            <div className="alert alert-success">{confirmOk}</div>
-          )}
-          {confirmErr && (
-            <div className="alert alert-error">{confirmErr}</div>
-          )}
-        </div>
-      )}
-
-      {/* No pending transfers indicator */}
-      {pendingTransfers.length === 0 && (
-        <div
-          className="alert alert-info"
-          style={{ marginBottom: "20px", fontSize: "13px" }}
-        >
-          ✅ No pending stock transfers. All dispatched items have been
-          confirmed.
-        </div>
-      )}
 
       {/* ════════════════════════════════════════════════════════════════════════
           SECTION 2 — LOW STOCK ALERTS
@@ -355,6 +215,19 @@ export default function Sales() {
           </select>
         </div>
 
+        {paymentMethod !== "Cash" && (
+          <div className="form-group">
+            <label>Reference Number</label>
+            <input
+              type="text"
+              value={refNum}
+              onChange={(e) => setRefNum(e.target.value)}
+              placeholder="Enter bank reference number"
+              required
+            />
+          </div>
+        )}
+
         <div className="form-group">
           <label>Delivery Type</label>
           <select
@@ -414,108 +287,134 @@ export default function Sales() {
           <table>
             <thead>
               <tr>
-                <th>Product</th>
-                <th>Size</th>
-                <th>Price (ETB)</th>
-                <th>Shop Stock</th>
+                <th style={{ width: "40px" }}></th>
+                <th>Product Model</th>
+                <th>Sizes Count</th>
+                <th>Total Shop Stock</th>
               </tr>
             </thead>
             <tbody>
-              {products.flatMap((p) =>
-                (p.sizes || []).map((s) => (
-                  <tr key={`${p.id}-${s.id}`}>
-                    <td>{p.name}</td>
-                    <td>{s.size}</td>
-                    <td>
-                      {Number(s.price || 0).toLocaleString("en-ET", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                    <td>
-                      <span
-                        style={{
-                          fontWeight: 700,
-                          color:
-                            Number(s.shopStockQty || 0) === 0
-                              ? "#ef4444"
-                              : Number(s.shopStockQty || 0) <= 3
-                              ? "#f59e0b"
-                              : "inherit",
-                        }}
-                      >
-                        {Number(s.shopStockQty || 0)}
-                        {Number(s.shopStockQty || 0) === 0 && " — OUT"}
-                        {Number(s.shopStockQty || 0) > 0 &&
-                          Number(s.shopStockQty || 0) <= 3 &&
-                          " ⚠"}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
+              {products.map((product) => {
+                const totalShopQty = totals.get(product.id) || 0;
+                const isExpanded = !!expandedProductIds[product.id];
+                const sizes = product.sizes || [];
+
+                return (
+                  <React.Fragment key={product.id}>
+                    {/* Clickable Master Row */}
+                    <tr
+                      onClick={() => toggleExpand(product.id)}
+                      style={{
+                        cursor: "pointer",
+                        background: isExpanded ? "rgba(255, 102, 0, 0.04)" : "inherit",
+                        transition: "background 0.2s ease",
+                      }}
+                    >
+                      <td style={{ textAlign: "center", fontSize: "12px", color: "var(--orange)" }}>
+                        {isExpanded ? "▼" : "▶"}
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 900, fontSize: "15px" }}>{product.name}</div>
+                      </td>
+                      <td>
+                        <span className="low-stock-badge" style={{ background: "rgba(255, 102, 0, 0.08)", color: "var(--orange-dark)", borderColor: "rgba(255, 102, 0, 0.2)" }}>
+                          {sizes.length} {sizes.length === 1 ? "Size" : "Sizes"}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            fontWeight: 700,
+                            color:
+                              totalShopQty === 0
+                                ? "#ef4444"
+                                : totalShopQty <= 3
+                                ? "#f59e0b"
+                                : "inherit",
+                          }}
+                        >
+                          {totalShopQty}
+                          {totalShopQty === 0 && " — OUT"}
+                          {totalShopQty > 0 && totalShopQty <= 3 && " ⚠"}
+                        </span>
+                      </td>
+                    </tr>
+
+                    {/* Detail Expanded Row */}
+                    {isExpanded && (
+                      <tr style={{ background: "rgba(0, 0, 0, 0.02)" }}>
+                        <td colSpan="4" style={{ padding: "16px 24px" }}>
+                          <div
+                            style={{
+                              border: "1px solid rgba(255, 102, 0, 0.15)",
+                              borderRadius: "8px",
+                              overflow: "hidden",
+                              background: "rgba(255, 255, 255, 0.6)",
+                              boxShadow: "inset 0 2px 8px rgba(0, 0, 0, 0.05)",
+                            }}
+                          >
+                            <table style={{ width: "100%", borderCollapse: "collapse", background: "transparent" }}>
+                              <thead>
+                                <tr style={{ background: "rgba(255, 102, 0, 0.08)" }}>
+                                  <th style={{ background: "transparent", color: "var(--orange-dark)", padding: "8px 12px", fontSize: "12px", width: "30%" }}>Size</th>
+                                  <th style={{ background: "transparent", color: "var(--orange-dark)", padding: "8px 12px", fontSize: "12px", width: "40%" }}>Price (ETB)</th>
+                                  <th style={{ background: "transparent", color: "var(--orange-dark)", padding: "8px 12px", fontSize: "12px", width: "30%" }}>Shop Stock</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {sizes.length === 0 ? (
+                                  <tr>
+                                    <td colSpan="3" style={{ textAlign: "center", color: "var(--black-lighter)", padding: "12px" }}>
+                                      No sizes added to this model yet.
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  sizes.map((sizeRow) => (
+                                    <tr key={sizeRow.id} style={{ borderBottom: "1px solid rgba(0, 0, 0, 0.05)" }}>
+                                      <td style={{ padding: "8px 12px", fontWeight: 700 }}>{sizeRow.size}</td>
+                                      <td style={{ padding: "8px 12px" }}>
+                                        ETB{" "}
+                                        {Number(sizeRow.price || 0).toLocaleString("en-ET", {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        })}
+                                      </td>
+                                      <td style={{ padding: "8px 12px" }}>
+                                        <span
+                                          style={{
+                                            fontWeight: 700,
+                                            color:
+                                              Number(sizeRow.shopStockQty || 0) === 0
+                                                ? "#ef4444"
+                                                : Number(sizeRow.shopStockQty || 0) <= 3
+                                                ? "#f59e0b"
+                                                : "inherit",
+                                          }}
+                                        >
+                                          {Number(sizeRow.shopStockQty || 0)}
+                                          {Number(sizeRow.shopStockQty || 0) === 0 && " — OUT"}
+                                          {Number(sizeRow.shopStockQty || 0) > 0 &&
+                                            Number(sizeRow.shopStockQty || 0) <= 3 &&
+                                            " ⚠"}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════════════════════════════
-          SECTION 5 — RECENT SALES
-          ════════════════════════════════════════════════════════════════════════ */}
-      <h3 style={{ marginTop: "32px", marginBottom: "12px", color: "var(--orange)" }}>
-        Recent Sales
-      </h3>
-      <div className="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Product</th>
-              <th>Size</th>
-              <th>Qty</th>
-              <th>Total (ETB)</th>
-              <th>Payment</th>
-              <th>Delivery</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sales.length === 0 && (
-              <tr>
-                <td
-                  colSpan="7"
-                  style={{
-                    textAlign: "center",
-                    color: "var(--black-lighter)",
-                  }}
-                >
-                  No sales recorded yet.
-                </td>
-              </tr>
-            )}
-            {sales
-              .slice()
-              .reverse()
-              .slice(0, 50)
-              .map((s) => (
-                <tr key={s.id}>
-                  <td>{s.date}</td>
-                  <td>{s.productName}</td>
-                  <td>{s.size}</td>
-                  <td>{s.qty}</td>
-                  <td>
-                    ETB{" "}
-                    {Number(s.total || 0).toLocaleString("en-ET", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                  <td>{s.paymentMethod}</td>
-                  <td>{s.deliveryType}</td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
     </GlassCard>
   );
 }

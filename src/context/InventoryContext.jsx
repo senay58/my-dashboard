@@ -4,7 +4,7 @@ import { supabase } from "../supabaseClient";
 const STORAGE_KEY = "jegnit-inventory-data-v1";
 const REMOTE_TABLE = "inventory_state_v1";
 
-const PAYMENT_METHODS = ["Cash", "Card", "Bank Transfer"];
+const PAYMENT_METHODS = ["Cash", "CBE", "Telebirr", "BOA", "Dashen Bank", "Awash Bank"];
 const DELIVERY_TYPES = ["Pickup", "Delivery"];
 
 const createId = () => {
@@ -342,7 +342,7 @@ export function InventoryProvider({ children }) {
 
   // ─── Sales: validate BEFORE setter (fixes throw-in-setter bug) ─────────────
 
-  const recordSale = ({ date, productId, sizeId, qty, paymentMethod, deliveryType }) => {
+  const recordSale = ({ date, productId, sizeId, qty, paymentMethod, deliveryType, refNum }) => {
     const amount = Number(qty) || 0;
     if (!productId || !sizeId || amount <= 0) {
       throw new Error("Invalid sale details.");
@@ -389,6 +389,7 @@ export function InventoryProvider({ children }) {
         total,
         paymentMethod,
         deliveryType,
+        refNum: paymentMethod !== "Cash" ? refNum : "",
       },
     ]);
   };

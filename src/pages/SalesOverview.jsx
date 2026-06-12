@@ -13,7 +13,7 @@ import { useInventory } from "../context/InventoryContext.jsx";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
-export default function SalesDashboard() {
+export default function SalesOverview() {
   const { sales, getMonthlySummary } = useInventory();
 
   const [selectedMonth, setSelectedMonth] = useState(null);
@@ -90,7 +90,7 @@ export default function SalesDashboard() {
   };
 
   return (
-    <GlassCard title="Sales Dashboard">
+    <GlassCard title="Sales Overview">
       {monthly.length === 0 ? (
         <div className="alert alert-info">No sales yet. Record a sale to see the chart.</div>
       ) : (
@@ -132,7 +132,7 @@ export default function SalesDashboard() {
           </div>
 
           {selectedMonth && selectedStats && (
-            <div className="alert alert-info">
+            <div className="alert alert-info" style={{ marginBottom: "24px" }}>
               In <strong>{selectedMonth}</strong>, you sold{" "}
               <strong>{Number(selectedStats.qty || 0)}</strong> items with total revenue of{" "}
               <strong>
@@ -145,6 +145,72 @@ export default function SalesDashboard() {
               .
             </div>
           )}
+
+          {/* Recent Sales moved here */}
+          <h3 style={{ marginTop: "32px", marginBottom: "12px", color: "var(--orange)" }}>
+            Recent Sales
+          </h3>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Product</th>
+                  <th>Size</th>
+                  <th>Qty</th>
+                  <th>Total (ETB)</th>
+                  <th>Payment</th>
+                  <th>Ref. Number</th>
+                  <th>Delivery</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sales.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan="8"
+                      style={{
+                        textAlign: "center",
+                        color: "var(--black-lighter)",
+                      }}
+                    >
+                      No sales recorded yet.
+                    </td>
+                  </tr>
+                )}
+                {sales
+                  .slice()
+                  .reverse()
+                  .slice(0, 50)
+                  .map((s) => (
+                    <tr key={s.id}>
+                      <td>{s.date}</td>
+                      <td>{s.productName}</td>
+                      <td>{s.size}</td>
+                      <td>{s.qty}</td>
+                      <td>
+                        ETB{" "}
+                        {Number(s.total || 0).toLocaleString("en-ET", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </td>
+                      <td>{s.paymentMethod}</td>
+                      <td>
+                        {s.refNum ? (
+                          <span style={{ fontFamily: "monospace", fontSize: "12px", background: "rgba(0,0,0,0.05)", padding: "2px 6px", borderRadius: "4px" }}>
+                            {s.refNum}
+                          </span>
+                        ) : (
+                          <span style={{ color: "var(--black-lighter)", fontStyle: "italic" }}>—</span>
+                        )}
+                      </td>
+                      <td>{s.deliveryType}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </GlassCard>
