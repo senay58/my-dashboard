@@ -18,11 +18,37 @@ export default function SalesOverview() {
 
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedStats, setSelectedStats] = useState(null);
+  const [expandedDates, setExpandedDates] = useState({});
+
+  const toggleDate = (date) => {
+    setExpandedDates((prev) => ({ ...prev, [date]: !prev[date] }));
+  };
+
+  const fmtETB = (v) =>
+    Number(v || 0).toLocaleString("en-ET", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const monthly = useMemo(() => {
     const summary = getMonthlySummary(sales || [], {});
     return summary;
   }, [sales, getMonthlySummary]);
+
+  /* Group recent sales by date (newest first, capped at 100 individual sales) */
+  const salesByDate = useMemo(() => {
+    const recent = (sales || []).slice().reverse().slice(0, 100);
+    const map = {};
+    recent.forEach((s) => {
+      if (!map[s.date]) map[s.date] = [];
+      map[s.date].push(s);
+    });
+    return Object.entries(map)
+      .sort(([a], [b]) => (a > b ? -1 : 1))
+      .map(([date, items]) => ({
+        date,
+        items,
+        totalQty: items.reduce((sum, s) => sum + (Number(s.qty) || 0), 0),
+        totalAmount: items.reduce((sum, s) => sum + (Number(s.total) || 0), 0),
+      }));
+  }, [sales]);
 
   const data = useMemo(
     () => ({
@@ -113,13 +139,7 @@ export default function SalesOverview() {
                 </div>
                 <div className="info-box-footer">
                   Revenue:{" "}
-                  <strong>
-                    ETB{" "}
-                    {Number(m.total || 0).toLocaleString("en-ET", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </strong>
+                  <strong>ETB {fmtETB(m.total)}</strong>
                   <br />
                   Items sold: <strong>{Number(m.qty || 0)}</strong>
                 </div>
@@ -135,18 +155,13 @@ export default function SalesOverview() {
             <div className="alert alert-info" style={{ marginBottom: "24px" }}>
               In <strong>{selectedMonth}</strong>, you sold{" "}
               <strong>{Number(selectedStats.qty || 0)}</strong> items with total revenue of{" "}
-              <strong>
-                ETB{" "}
-                {Number(selectedStats.total || 0).toLocaleString("en-ET", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </strong>
-              .
+              <strong>ETB {fmtETB(selectedStats.total)}</strong>.
             </div>
           )}
 
-          {/* Recent Sales moved here */}
+          {/* ═══════════════════════════════════════════════════════════════════
+              RECENT SALES — ACCORDION GROUPED BY DATE
+              ═══════════════════════════════════════════════════════════════════ */}
           <h3 style={{ marginTop: "32px", marginBottom: "12px", color: "var(--orange)" }}>
             Recent Sales
           </h3>
@@ -154,21 +169,18 @@ export default function SalesOverview() {
             <table>
               <thead>
                 <tr>
+                  <th style={{ width: "36px" }}></th>
                   <th>Date</th>
-                  <th>Product</th>
-                  <th>Size</th>
-                  <th>Qty</th>
+                  <th>Sales Count</th>
+                  <th>Total Qty</th>
                   <th>Total (ETB)</th>
-                  <th>Payment</th>
-                  <th>Ref. Number</th>
-                  <th>Delivery</th>
                 </tr>
               </thead>
               <tbody>
-                {sales.length === 0 && (
+                {salesByDate.length === 0 && (
                   <tr>
                     <td
-                      colSpan="8"
+                      colSpan="5"
                       style={{
                         textAlign: "center",
                         color: "var(--black-lighter)",
@@ -178,36 +190,95 @@ export default function SalesOverview() {
                     </td>
                   </tr>
                 )}
-                {sales
-                  .slice()
-                  .reverse()
-                  .slice(0, 50)
-                  .map((s) => (
-                    <tr key={s.id}>
-                      <td>{s.date}</td>
-                      <td>{s.productName}</td>
-                      <td>{s.size}</td>
-                      <td>{s.qty}</td>
-                      <td>
-                        ETB{" "}
-                        {Number(s.total || 0).toLocaleString("en-ET", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </td>
-                      <td>{s.paymentMethod}</td>
-                      <td>
-                        {s.refNum ? (
-                          <span style={{ fontFamily: "monospace", fontSize: "12px", background: "rgba(0,0,0,0.05)", padding: "2px 6px", borderRadius: "4px" }}>
-                            {s.refNum}
+                {salesByDate.map((group) => {
+                  const isOpen = !!expandedDates[group.date];
+                  return (
+                    <React.Fragment key={group.date}>
+                      {/* ── Date Master Row ── */}
+                      <tr
+                        onClick={() => toggleDate(group.date)}
+                        style={{
+                          cursor: "pointer",
+                          background: isOpen ? "rgba(255, 102, 0, 0.04)" : "inherit",
+                          transition: "background 0.2s ease",
+                        }}
+                      >
+                        <td style={{ textAlign: "center", fontSize: "12px", color: "var(--orange)" }}>
+                          {isOpen ? "▼" : "▶"}
+                        </td>
+                        <td>
+                          <span style={{ fontWeight: 700 }}>{group.date}</span>
+                        </td>
+                        <td>
+                          <span
+                            className="low-stock-badge"
+                            style={{
+                              background: "rgba(255, 102, 0, 0.08)",
+                              color: "var(--orange-dark)",
+                              borderColor: "rgba(255, 102, 0, 0.2)",
+                            }}
+                          >
+                            {group.items.length} {group.items.length === 1 ? "Sale" : "Sales"}
                           </span>
-                        ) : (
-                          <span style={{ color: "var(--black-lighter)", fontStyle: "italic" }}>—</span>
-                        )}
-                      </td>
-                      <td>{s.deliveryType}</td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td style={{ fontWeight: 600 }}>{group.totalQty}</td>
+                        <td style={{ fontWeight: 600 }}>ETB {fmtETB(group.totalAmount)}</td>
+                      </tr>
+
+                      {/* ── Expanded Detail Rows ── */}
+                      {isOpen && (
+                        <tr style={{ background: "rgba(0, 0, 0, 0.02)" }}>
+                          <td colSpan="5" style={{ padding: "12px 20px" }}>
+                            <div
+                              style={{
+                                border: "1px solid rgba(255, 102, 0, 0.15)",
+                                borderRadius: "8px",
+                                overflow: "hidden",
+                                background: "rgba(255, 255, 255, 0.6)",
+                                boxShadow: "inset 0 2px 8px rgba(0, 0, 0, 0.05)",
+                              }}
+                            >
+                              <table style={{ width: "100%", borderCollapse: "collapse", background: "transparent" }}>
+                                <thead>
+                                  <tr style={{ background: "rgba(255, 102, 0, 0.08)" }}>
+                                    <th style={{ background: "transparent", color: "var(--orange-dark)", padding: "8px 12px", fontSize: "12px" }}>Product</th>
+                                    <th style={{ background: "transparent", color: "var(--orange-dark)", padding: "8px 12px", fontSize: "12px" }}>Size</th>
+                                    <th style={{ background: "transparent", color: "var(--orange-dark)", padding: "8px 12px", fontSize: "12px" }}>Qty</th>
+                                    <th style={{ background: "transparent", color: "var(--orange-dark)", padding: "8px 12px", fontSize: "12px" }}>Total (ETB)</th>
+                                    <th style={{ background: "transparent", color: "var(--orange-dark)", padding: "8px 12px", fontSize: "12px" }}>Payment</th>
+                                    <th style={{ background: "transparent", color: "var(--orange-dark)", padding: "8px 12px", fontSize: "12px" }}>Ref. Number</th>
+                                    <th style={{ background: "transparent", color: "var(--orange-dark)", padding: "8px 12px", fontSize: "12px" }}>Delivery</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {group.items.map((s) => (
+                                    <tr key={s.id} style={{ borderBottom: "1px solid rgba(0, 0, 0, 0.05)" }}>
+                                      <td style={{ padding: "8px 12px", fontWeight: 600 }}>{s.productName}</td>
+                                      <td style={{ padding: "8px 12px" }}>{s.size}</td>
+                                      <td style={{ padding: "8px 12px" }}>{s.qty}</td>
+                                      <td style={{ padding: "8px 12px" }}>ETB {fmtETB(s.total)}</td>
+                                      <td style={{ padding: "8px 12px" }}>{s.paymentMethod}</td>
+                                      <td style={{ padding: "8px 12px" }}>
+                                        {s.refNum ? (
+                                          <span style={{ fontFamily: "monospace", fontSize: "12px", background: "rgba(0,0,0,0.05)", padding: "2px 6px", borderRadius: "4px" }}>
+                                            {s.refNum}
+                                          </span>
+                                        ) : (
+                                          <span style={{ color: "var(--black-lighter)", fontStyle: "italic" }}>—</span>
+                                        )}
+                                      </td>
+                                      <td style={{ padding: "8px 12px" }}>{s.deliveryType}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
