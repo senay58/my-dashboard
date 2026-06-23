@@ -81,12 +81,11 @@ export default function Reports() {
           </h1>
           <div class="summary">
             <p><strong>Date Range (filters on screen):</strong> ${fromDate || "All"} to ${toDate || "All"}</p>
-            <p><strong>Product filter (on screen):</strong> ${
-              productFilter ? products.find(p => p.id === productFilter)?.name || "All" : "All"
-            }</p>
+            <p><strong>Product filter (on screen):</strong> ${productFilter ? products.find(p => p.id === productFilter)?.name || "All" : "All"
+      }</p>
             <p><strong>Total Quantity (all sales):</strong> ${allTotalQty}</p>
             <p><strong>Total Amount (all sales):</strong> ETB ${allTotalAmount
-              .toLocaleString("en-ET", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        .toLocaleString("en-ET", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </div>
           <h2>Daily Summary (All Sales)</h2>
           <table>
@@ -95,14 +94,14 @@ export default function Reports() {
             </thead>
             <tbody>
               ${allDaily
-                .map(
-                  (r) =>
-                    `<tr><td>${r.date}</td><td>${r.qty}</td><td>${Number(r.total || 0).toLocaleString("en-ET", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}</td></tr>`
-                )
-                .join("")}
+        .map(
+          (r) =>
+            `<tr><td>${r.date}</td><td>${r.qty}</td><td>${Number(r.total || 0).toLocaleString("en-ET", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}</td></tr>`
+        )
+        .join("")}
             </tbody>
           </table>
           <h2>Monthly Summary (All Sales)</h2>
@@ -112,14 +111,14 @@ export default function Reports() {
             </thead>
             <tbody>
               ${allMonthly
-                .map(
-                  (r) =>
-                    `<tr><td>${r.month}</td><td>${r.qty}</td><td>${Number(r.total || 0).toLocaleString("en-ET", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}</td></tr>`
-                )
-                .join("")}
+        .map(
+          (r) =>
+            `<tr><td>${r.month}</td><td>${r.qty}</td><td>${Number(r.total || 0).toLocaleString("en-ET", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}</td></tr>`
+        )
+        .join("")}
             </tbody>
           </table>
           <h2>Sales Detail (Every Recorded Sale)</h2>
@@ -129,26 +128,41 @@ export default function Reports() {
             </thead>
             <tbody>
               ${allSales
-                .map(
-                  (s) =>
-                    `<tr><td>${s.date}</td><td>${s.productName}</td><td>${s.size}</td><td>${s.qty}</td><td>${Number(
-                      s.total || 0
-                    ).toLocaleString("en-ET", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}</td><td>${s.paymentMethod}</td><td>${s.refNum || "—"}</td><td>${s.deliveryType}</td></tr>`
-                )
-                .join("")}
+        .map(
+          (s) =>
+            `<tr><td>${s.date}</td><td>${s.productName}</td><td>${s.size}</td><td>${s.qty}</td><td>${Number(
+              s.total || 0
+            ).toLocaleString("en-ET", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}</td><td>${s.paymentMethod}</td><td>${s.refNum || "—"}</td><td>${s.deliveryType}</td></tr>`
+        )
+        .join("")}
             </tbody>
           </table>
         </body>
       </html>
     `;
-    printWindow.document.write(content);
-    printWindow.document.close();
-    setTimeout(() => {
-      printWindow.print();
-    }, 250);
+    if (printWindow) {
+      printWindow.document.write(content);
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    } else {
+      const iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      document.body.appendChild(iframe);
+      iframe.contentDocument.write(content);
+      iframe.contentDocument.close();
+      iframe.contentWindow.focus();
+      setTimeout(() => {
+        iframe.contentWindow.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }, 250);
+    }
   };
 
   return (
