@@ -509,6 +509,7 @@ export function InventoryProvider({ children }) {
   const getDailySummary = (allSales, filters) => {
     const map = new Map();
     for (const s of allSales) {
+      if (s.status === "returned") continue; // Option B: exclude returned sales from analytics
       if (filters?.fromDate && s.date < filters.fromDate) continue;
       if (filters?.toDate && s.date > filters.toDate) continue;
       if (filters?.productName && s.productId !== filters.productName) continue;
@@ -524,6 +525,7 @@ export function InventoryProvider({ children }) {
   const getMonthlySummary = (allSales, filters) => {
     const map = new Map();
     for (const s of allSales) {
+      if (s.status === "returned") continue; // Option B: exclude returned sales from analytics
       if (filters?.fromDate && s.date < filters.fromDate) continue;
       if (filters?.toDate && s.date > filters.toDate) continue;
       if (filters?.productName && s.productId !== filters.productName) continue;
@@ -535,6 +537,133 @@ export function InventoryProvider({ children }) {
       map.set(key, prev);
     }
     return Array.from(map.values()).sort((a, b) => (a.month < b.month ? -1 : 1));
+  };
+
+  // ─── Multi-Item Replacement (Option B) ─────────────────────────────────────
+  // exchangeItems: [{ productId, sizeId, qty }]
+  // returnQty: how many of the original sale item to take back
+  const recordMultiReplacement = ({ saleId, returnQty, exchangeItems }) => {
+    const retAmount = Number(returnQty) || 0;
+    if (!saleId || retAmount <= 0 || !Array.isArray(exchangeItems) || exchangeItems.length === 0) {
+      throw new Error("Invalid replacement details.");
+    }
+
+    // ── Validate original sale ────────────────────────────────────────────────
+    const existingSale = sales.find((s) => s.id === saleId);
+    if (!existingSale) throw new Error("Original sale not found.");
+    if (retAmount > (Number(existingSale.qty) || 0)) {
+      throw new Error("Return quantity cannot exceed original sale quantity.");
+    }
+
+    const originalProduct = findProductById(existingSale.productId);
+    if (!originalProduct) throw new Error("Original product not found.");
+    const originalSize = (originalProduct.sizes || []).find((s) => s.id === existingSale.sizeId);
+    if (!originalSize) throw new Error("Original size not found.");
+
+    // ── Validate all exchange items BEFORE touching state ─────────────────────
+    const resolvedItems = exchangeItems.map((item, idx) => {
+      const amount = Number(item.qty) || 0;
+      if (!item.productId || !item.sizeId || amount <= 0) {
+        throw new Error(`Exchange item #${idx + 1} is invalid.`);
+      }
+      const prod = findProductById(item.productId);
+      if (!prod) throw new Error(`Exchange item #${idx + 1}: product not found.`);
+      const sizeRow = (prod.sizes || []).find((s) => s.id === item.sizeId);
+      if (!sizeRow) throw new Error(`Exchange item #${idx + 1}: size not found.`);
+      const available = Number(sizeRow.shopStockQty) || 0;
+      if (available < amount) {
+        throw new Error(
+          `Not enough shop stock for ${prod.name} (${sizeRow.size}). Available: ${available}`
+        );
+      }
+      return { prod, sizeRow, amount };
+    });
+
+    // ── Calculate money ────────────────────────────────────────────────────────
+    const returnedValue = (Number(existingSale.unitPrice) || 0) * retAmount;
+    const newItemsValue = resolvedItems.reduce(
+      (sum, { sizeRow, amount }) => sum + (Number(sizeRow.price) || 0) * amount,
+      0
+    );
+    const diff = newItemsValue - returnedValue; // positive = customer pays, negative = refund
+
+    // ── Update shop stock ─────────────────────────────────────────────────────
+    saveProducts((prev) =>
+      prev.map((p) => {
+        // Add returned item back to shop stock
+        if (p.id === originalProduct.id) {
+          return {
+            ...p,
+            sizes: (p.sizes || []).map((s) => {
+              if (s.id !== originalSize.id) return s;
+              return { ...s, shopStockQty: (Number(s.shopStockQty) || 0) + retAmount };
+            }),
+          };
+        }
+        // Deduct each new item from shop stock
+        const matchingItems = resolvedItems.filter((ri) => ri.prod.id === p.id);
+        if (matchingItems.length === 0) return p;
+        return {
+          ...p,
+          sizes: (p.sizes || []).map((s) => {
+            const match = matchingItems.find((ri) => ri.sizeRow.id === s.id);
+            if (!match) return s;
+            return { ...s, shopStockQty: (Number(s.shopStockQty) || 0) - match.amount };
+          }),
+        };
+      })
+    );
+
+    // ── Mark original sale as returned (Option B) ─────────────────────────────
+    // New sale records created for each exchange item
+    saveSales((prev) => {
+      const updated = prev.map((s) => {
+        if (s.id !== saleId) return s;
+        return { ...s, status: "returned" }; // Preserve record, just mark it
+      });
+      const newSaleRecords = resolvedItems.map(({ prod, sizeRow, amount }) => ({
+        id: createId(),
+        date: existingSale.date,
+        productId: prod.id,
+        sizeId: sizeRow.id,
+        productName: prod.name,
+        size: sizeRow.size,
+        qty: amount,
+        unitPrice: Number(sizeRow.price) || 0,
+        total: (Number(sizeRow.price) || 0) * amount,
+        paymentMethod: existingSale.paymentMethod,
+        deliveryType: existingSale.deliveryType,
+        refNum: existingSale.refNum || "",
+      }));
+      return [...updated, ...newSaleRecords];
+    });
+
+    // ── Save replacement history ───────────────────────────────────────────────
+    saveReplacements((prev) => [
+      ...prev,
+      {
+        id: createId(),
+        date: existingSale.date,
+        oldProductName: originalProduct.name,
+        oldSize: originalSize.size,
+        returnQty: retAmount,
+        returnedValue,
+        newItemsValue,
+        customerPays: diff > 0 ? diff : 0,
+        refundToCustomer: diff < 0 ? -diff : 0,
+        // Array of new items for display in history
+        newItems: resolvedItems.map(({ prod, sizeRow, amount }) => ({
+          productName: prod.name,
+          size: sizeRow.size,
+          qty: amount,
+          unitPrice: Number(sizeRow.price) || 0,
+        })),
+        // Legacy fields for backwards compat with old history display
+        newProductName: resolvedItems.map((ri) => ri.prod.name).join(", "),
+        newSize: resolvedItems.map((ri) => ri.sizeRow.size).join(", "),
+        qty: resolvedItems.reduce((s, ri) => s + ri.amount, 0),
+      },
+    ]);
   };
 
   // ─── Reset ──────────────────────────────────────────────────────────────────
@@ -566,6 +695,7 @@ export function InventoryProvider({ children }) {
     getDailySummary,
     getMonthlySummary,
     recordReplacement,
+    recordMultiReplacement,
     resetAllData,
     isSyncing,
     syncError,

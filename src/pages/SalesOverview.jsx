@@ -45,8 +45,9 @@ export default function SalesOverview() {
       .map(([date, items]) => ({
         date,
         items,
-        totalQty: items.reduce((sum, s) => sum + (Number(s.qty) || 0), 0),
-        totalAmount: items.reduce((sum, s) => sum + (Number(s.total) || 0), 0),
+        // Exclude returned sales from totals for accuracy
+        totalQty: items.filter((s) => s.status !== "returned").reduce((sum, s) => sum + (Number(s.qty) || 0), 0),
+        totalAmount: items.filter((s) => s.status !== "returned").reduce((sum, s) => sum + (Number(s.total) || 0), 0),
       }));
   }, [sales]);
 
@@ -252,8 +253,34 @@ export default function SalesOverview() {
                                 </thead>
                                 <tbody>
                                   {group.items.map((s) => (
-                                    <tr key={s.id} style={{ borderBottom: "1px solid rgba(0, 0, 0, 0.05)" }}>
-                                      <td style={{ padding: "8px 12px", fontWeight: 600 }}>{s.productName}</td>
+                                    <tr
+                                      key={s.id}
+                                      style={{
+                                        borderBottom: "1px solid rgba(0, 0, 0, 0.05)",
+                                        opacity: s.status === "returned" ? 0.6 : 1,
+                                        background: s.status === "returned" ? "rgba(220,53,69,0.04)" : "transparent",
+                                      }}
+                                    >
+                                      <td style={{ padding: "8px 12px", fontWeight: 600 }}>
+                                        {s.productName}
+                                        {s.status === "returned" && (
+                                          <span
+                                            style={{
+                                              marginLeft: "8px",
+                                              fontSize: "10px",
+                                              fontWeight: 700,
+                                              background: "rgba(220,53,69,0.15)",
+                                              color: "#dc3545",
+                                              border: "1px solid rgba(220,53,69,0.4)",
+                                              borderRadius: "4px",
+                                              padding: "1px 6px",
+                                              letterSpacing: "0.5px",
+                                            }}
+                                          >
+                                            RETURNED
+                                          </span>
+                                        )}
+                                      </td>
                                       <td style={{ padding: "8px 12px" }}>{s.size}</td>
                                       <td style={{ padding: "8px 12px" }}>{s.qty}</td>
                                       <td style={{ padding: "8px 12px" }}>ETB {fmtETB(s.total)}</td>
