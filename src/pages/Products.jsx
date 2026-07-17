@@ -118,8 +118,8 @@ export default function Products() {
     setName(product.name);
     setSize(sizeRow.size);
     setPrice(sizeRow.price);
-    setAddMainQty("");
-    setAddShopQty("");
+    setAddMainQty(sizeRow.mainStockQty || 0);
+    setAddShopQty(sizeRow.shopStockQty || 0);
   };
 
   const cancelEdit = () => {
@@ -136,8 +136,8 @@ export default function Products() {
       name,
       size,
       price: Number(price),
-      mainStockQty: editing.sizeRow.mainStockQty,
-      shopStockQty: editing.sizeRow.shopStockQty,
+      mainStockQty: Number(addMainQty),
+      shopStockQty: Number(addShopQty),
     });
     setLastAddedName(name); // Keep auto-expanded
     setMessage("Product updated.");
@@ -196,6 +196,26 @@ export default function Products() {
               onChange={(e) => setPrice(e.target.value)}
               min="0"
               step="0.01"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>Main Stock</label>
+            <input
+              type="number"
+              value={addMainQty}
+              onChange={(e) => setAddMainQty(e.target.value)}
+              min="0"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>Shop Stock</label>
+            <input
+              type="number"
+              value={addShopQty}
+              onChange={(e) => setAddShopQty(e.target.value)}
+              min="0"
               required
             />
           </div>
