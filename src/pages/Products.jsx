@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from "react";
 import GlassCard from "../components/GlassCard.jsx";
 import { useInventory } from "../context/InventoryContext.jsx";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 export default function Products() {
   const {
@@ -166,6 +168,54 @@ export default function Products() {
       setTransferError(`Error: ${error.message}`);
       setTimeout(() => setTransferError(""), 4000);
     }
+  };
+
+  const downloadInventory = () => {
+    const doc = new jsPDF();
+    
+    // JEGNIT Header
+    doc.setFontSize(22);
+    doc.setTextColor(255, 102, 0); // var(--orange)
+    doc.setFont("helvetica", "bold");
+    doc.text("JEGNIT", 14, 20);
+    
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "normal");
+    doc.text("Total Inventory Report", 14, 30);
+    
+    const dateStr = new Date().toLocaleString();
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated on: ${dateStr}`, 14, 38);
+
+    const tableColumn = ["Product Name", "Size", "Price (ETB)", "Main Stock", "Shop Stock"];
+    const tableRows = [];
+
+    // Format the data
+    products.forEach((product) => {
+      (product.sizes || []).forEach((s) => {
+        const rowData = [
+          product.name,
+          s.size,
+          Number(s.price || 0).toLocaleString("en-ET", { minimumFractionDigits: 2 }),
+          Number(s.mainStockQty || 0).toString(),
+          Number(s.shopStockQty || 0).toString(),
+        ];
+        tableRows.push(rowData);
+      });
+    });
+
+    doc.autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 45,
+      theme: 'grid',
+      headStyles: { fillColor: [255, 102, 0] }, // Orange header
+      styles: { fontSize: 10 },
+    });
+
+    doc.save(`jegnit_inventory_${new Date().toISOString().slice(0,10)}.pdf`);
   };
 
   // ─── Render ─────────────────────────────────────────────────────────────────
@@ -478,9 +528,14 @@ export default function Products() {
       </div>
 
       {/* ── Products Table ── */}
-      <h3 style={{ marginTop: "32px", marginBottom: "12px", color: "var(--orange)" }}>
-        Product Inventory
-      </h3>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "32px", marginBottom: "12px" }}>
+        <h3 style={{ margin: 0, color: "var(--orange)" }}>
+          Product Inventory
+        </h3>
+        <button type="button" className="btn-small" onClick={downloadInventory} style={{ background: "var(--orange)", color: "white", padding: "8px 16px" }}>
+          Download Inventory (PDF)
+        </button>
+      </div>
       <div className="table-wrapper">
         <table>
           <thead>
