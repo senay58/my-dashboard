@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import GlassCard from "../components/GlassCard.jsx";
 import { useInventory } from "../context/InventoryContext.jsx";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 export default function Products() {
   const {
@@ -206,7 +206,7 @@ export default function Products() {
       });
     });
 
-    doc.autoTable({
+    autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
       startY: 45,
