@@ -340,6 +340,15 @@ export function InventoryProvider({ children }) {
     );
   };
 
+  const deleteTransfer = (transferId) => {
+    saveTransfers((prev) => prev.filter((t) => t.id !== transferId));
+  };
+
+  const deleteTransfersByMonth = (monthStr) => {
+    // monthStr format: "YYYY-MM"
+    saveTransfers((prev) => prev.filter((t) => !t.date.startsWith(monthStr)));
+  };
+
   // ─── Sales: validate BEFORE setter (fixes throw-in-setter bug) ─────────────
 
   const recordSale = ({ date, productId, sizeId, qty, paymentMethod, deliveryType, refNum }) => {
@@ -688,6 +697,8 @@ export function InventoryProvider({ children }) {
     updateProductSize,
     requestTransfer,
     confirmTransfer,
+    deleteTransfer,
+    deleteTransfersByMonth,
     deleteProduct,
     deleteProductSize,
     recordSale,

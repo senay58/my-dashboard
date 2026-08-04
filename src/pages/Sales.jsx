@@ -48,6 +48,7 @@ export default function Sales() {
 
   // ─── Low stock alerts ───────────────────────────────────────────────────────
   const [lowStockAlerts, setLowStockAlerts] = useState([]);
+  const [showLowStock, setShowLowStock] = useState(false);
 
   const selectedProduct = useMemo(
     () => products.find((p) => p.id === productId),
@@ -108,16 +109,24 @@ export default function Sales() {
           ════════════════════════════════════════════════════════════════════════ */}
       {lowStockAlerts.length > 0 && (
         <div className="alert alert-warning">
-          <strong>Low Stock Alert:</strong> The following items have 3 or fewer
-          units in shop stock:
-          <ul style={{ margin: "8px 0 0 0", paddingLeft: "20px" }}>
-            {lowStockAlerts.map((item, idx) => (
-              <li key={idx}>
-                {item.product.name} ({item.sizeRow.size}) —{" "}
-                {item.sizeRow.shopStockQty} units remaining
-              </li>
-            ))}
-          </ul>
+          <div 
+            style={{ display: "flex", justifyContent: "space-between", cursor: "pointer", alignItems: "center" }}
+            onClick={() => setShowLowStock(!showLowStock)}
+          >
+            <span><strong>Low Stock Alert:</strong> {lowStockAlerts.length} item(s) have 3 or fewer units in shop stock.</span>
+            <span style={{ fontSize: "12px", fontWeight: "bold" }}>{showLowStock ? "▼" : "▶"}</span>
+          </div>
+          
+          {showLowStock && (
+            <ul style={{ margin: "8px 0 0 0", paddingLeft: "20px" }}>
+              {lowStockAlerts.map((item, idx) => (
+                <li key={idx}>
+                  {item.product.name} ({item.sizeRow.size}) —{" "}
+                  {item.sizeRow.shopStockQty} units remaining
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
