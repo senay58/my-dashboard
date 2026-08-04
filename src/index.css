@@ -694,3 +694,12 @@ tr:nth-child(even) td {
     grid-template-columns: 1fr;
   }
 }
+
+/* Transfer history: on very small phones the month button grows full-width */
+@media (max-width: 480px) {
+  .transfer-month-toggle {
+    width: 100%;
+    text-align: left;
+  }
+}
+

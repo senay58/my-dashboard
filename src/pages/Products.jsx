@@ -499,7 +499,8 @@ export default function Products() {
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                      gap: "8px",
                       padding: "10px 16px",
                       background: isOpen ? "rgba(255,102,0,0.06)" : "transparent",
                       borderBottom: isOpen ? "1px solid rgba(255,102,0,0.15)" : "none",
@@ -507,14 +508,14 @@ export default function Products() {
                   >
                     <button
                       type="button"
-                      className="btn-small btn-secondary"
+                      className="btn-small btn-secondary transfer-month-toggle"
                       onClick={() => toggleMonth(month)}
-                      style={{ fontWeight: 700, fontSize: "14px" }}
+                      style={{ fontWeight: 700, fontSize: "14px", flexShrink: 0 }}
                     >
                       {isOpen ? "▲" : "▼"} {label}
                     </button>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <span style={{ fontSize: "12px", color: "var(--black-lighter)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", flex: 1, justifyContent: "flex-end", minWidth: 0 }}>
+                      <span style={{ fontSize: "12px", color: "var(--black-lighter)", whiteSpace: "nowrap" }}>
                         {monthTransfers.length} record(s)
                         {pendingInMonth > 0 && <span style={{ color: "#ffb74d", marginLeft: "6px" }}>⏳ {pendingInMonth}</span>}
                         {confirmedInMonth > 0 && <span style={{ color: "#81c784", marginLeft: "6px" }}>✅ {confirmedInMonth}</span>}
