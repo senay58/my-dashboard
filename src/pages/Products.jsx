@@ -36,7 +36,10 @@ export default function Products() {
   // ─── Transfer history filter & State ────────────────────────────────────────
   const [historyFilter, setHistoryFilter] = useState("all"); // "all" | "pending" | "confirmed"
   const [showTransferHistory, setShowTransferHistory] = useState(false);
-  const [deleteMonthStr, setDeleteMonthStr] = useState("");
+  const [expandedMonths, setExpandedMonths] = useState({});
+
+  const toggleMonth = (monthStr) =>
+    setExpandedMonths((prev) => ({ ...prev, [monthStr]: !prev[monthStr] }));
 
   // ─── Accordion Expansion State & Logic ──────────────────────────────────────
   const [expandedProductIds, setExpandedProductIds] = useState({});
@@ -447,137 +450,153 @@ export default function Products() {
       </div>
 
       {/* ── Transfer History ── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "32px", marginBottom: "8px" }}>
-        <h3 
-          style={{ margin: 0, color: "var(--orange)", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }} 
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "32px", marginBottom: "8px" }}>
+        <h3 style={{ margin: 0, color: "var(--orange)" }}>Transfer History</h3>
+        <button
+          type="button"
+          className={`btn-small ${showTransferHistory ? "" : "btn-secondary"}`}
           onClick={() => setShowTransferHistory(!showTransferHistory)}
+          style={{ fontSize: "12px" }}
         >
-          <span style={{ fontSize: "14px" }}>{showTransferHistory ? "▼" : "▶"}</span> Transfer History
-        </h3>
+          {showTransferHistory ? "▲ Collapse" : "▼ Show Records"}
+        </button>
       </div>
-      
-      {showTransferHistory && (
-        <>
-          <div style={{ marginBottom: "12px", display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", gap: "8px" }}>
-              {["all", "pending", "confirmed"].map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  className={`btn-small ${historyFilter === f ? "" : "btn-secondary"}`}
-                  onClick={() => setHistoryFilter(f)}
-                >
-                  {f === "all" ? "All" : f === "pending" ? "⏳ Pending" : "✅ Confirmed"}
-                </button>
-              ))}
-            </div>
 
-            <div style={{ display: "flex", gap: "8px", alignItems: "center", background: "rgba(220,53,69,0.05)", padding: "4px 8px", borderRadius: "6px" }}>
-              <input 
-                type="month" 
-                value={deleteMonthStr}
-                onChange={(e) => setDeleteMonthStr(e.target.value)}
-                style={{ padding: "4px", margin: 0, height: "32px", fontSize: "14px" }}
-              />
-              <button 
-                type="button" 
-                className="btn-small btn-danger"
-                disabled={!deleteMonthStr}
-                onClick={() => {
-                  if (window.confirm(`Are you sure you want to delete ALL transfer records for ${deleteMonthStr}?`)) {
-                    deleteTransfersByMonth(deleteMonthStr);
-                    setDeleteMonthStr("");
-                  }
-                }}
-              >
-                Delete by Month
-              </button>
-            </div>
-          </div>
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Product</th>
-                  <th>Size</th>
-                  <th>Qty</th>
-                  <th>Status</th>
-                  <th>Confirmed At</th>
-                  <th style={{ textAlign: "right" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTransfers.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan="7"
-                      style={{ textAlign: "center", color: "var(--black-lighter)" }}
+      {showTransferHistory && (() => {
+        // Group transfers by month
+        const byMonth = {};
+        [...transfers].sort((a, b) => (b.date > a.date ? 1 : -1)).forEach((t) => {
+          const month = t.date.slice(0, 7);
+          if (!byMonth[month]) byMonth[month] = [];
+          byMonth[month].push(t);
+        });
+        const months = Object.keys(byMonth).sort((a, b) => (b > a ? 1 : -1));
+
+        return months.length === 0 ? (
+          <div className="alert alert-info">No transfer records yet.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {months.map((month) => {
+              const monthTransfers = byMonth[month];
+              const isOpen = !!expandedMonths[month];
+              const [y, m] = month.split("-");
+              const label = new Date(Number(y), Number(m) - 1, 1).toLocaleString("default", { month: "long", year: "numeric" });
+              const pendingInMonth = monthTransfers.filter((t) => t.status === "pending").length;
+              const confirmedInMonth = monthTransfers.filter((t) => t.status === "confirmed").length;
+
+              return (
+                <div
+                  key={month}
+                  style={{
+                    border: "1px solid rgba(255,102,0,0.2)",
+                    borderRadius: "10px",
+                    overflow: "hidden",
+                    background: "rgba(255,255,255,0.5)",
+                  }}
+                >
+                  {/* Month Row */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "10px 16px",
+                      background: isOpen ? "rgba(255,102,0,0.06)" : "transparent",
+                      borderBottom: isOpen ? "1px solid rgba(255,102,0,0.15)" : "none",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className="btn-small btn-secondary"
+                      onClick={() => toggleMonth(month)}
+                      style={{ fontWeight: 700, fontSize: "14px" }}
                     >
-                      No transfer records found.
-                    </td>
-                  </tr>
-                )}
-                {filteredTransfers.map((t) => (
-                  <tr key={t.id}>
-                    <td>{t.date}</td>
-                    <td>{t.productName}</td>
-                    <td>{t.size}</td>
-                    <td>{t.qty}</td>
-                    <td>
-                      {t.status === "pending" ? (
-                        <span
-                          style={{
-                            background: "rgba(255,152,0,0.18)",
-                            color: "#ffb74d",
-                            borderRadius: "999px",
-                            padding: "2px 10px",
-                            fontWeight: 700,
-                            fontSize: "12px",
-                          }}
-                        >
-                          ⏳ Pending
-                        </span>
-                      ) : (
-                        <span
-                          style={{
-                            background: "rgba(76,175,80,0.18)",
-                            color: "#81c784",
-                            borderRadius: "999px",
-                            padding: "2px 10px",
-                            fontWeight: 700,
-                            fontSize: "12px",
-                          }}
-                        >
-                          ✅ Confirmed
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ fontSize: "12px", color: "var(--black-lighter)" }}>
-                      {t.confirmedAt
-                        ? new Date(t.confirmedAt).toLocaleString()
-                        : "—"}
-                    </td>
-                    <td style={{ textAlign: "right" }}>
-                      <button 
-                        type="button" 
-                        className="btn-small btn-danger" 
+                      {isOpen ? "▲" : "▼"} {label}
+                    </button>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <span style={{ fontSize: "12px", color: "var(--black-lighter)" }}>
+                        {monthTransfers.length} record(s)
+                        {pendingInMonth > 0 && <span style={{ color: "#ffb74d", marginLeft: "6px" }}>⏳ {pendingInMonth}</span>}
+                        {confirmedInMonth > 0 && <span style={{ color: "#81c784", marginLeft: "6px" }}>✅ {confirmedInMonth}</span>}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn-small btn-danger"
+                        title={`Delete all transfers for ${label}`}
                         onClick={() => {
-                          if (window.confirm("Delete this transfer record?")) {
-                            deleteTransfer(t.id);
+                          if (window.confirm(`Delete ALL ${monthTransfers.length} transfer record(s) for ${label}?`)) {
+                            deleteTransfersByMonth(month);
                           }
                         }}
+                        style={{ padding: "4px 10px", fontSize: "13px" }}
                       >
-                        Del
+                        🗑 Delete Month
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+
+                  {/* Detailed records */}
+                  {isOpen && (
+                    <div className="table-wrapper" style={{ margin: 0, borderRadius: 0 }}>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Date</th>
+                            <th>Product</th>
+                            <th>Size</th>
+                            <th>Qty</th>
+                            <th>Status</th>
+                            <th>Confirmed At</th>
+                            <th style={{ textAlign: "right" }}>Del</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {monthTransfers.map((t) => (
+                            <tr key={t.id}>
+                              <td>{t.date}</td>
+                              <td>{t.productName}</td>
+                              <td>{t.size}</td>
+                              <td>{t.qty}</td>
+                              <td>
+                                {t.status === "pending" ? (
+                                  <span style={{ background: "rgba(255,152,0,0.18)", color: "#ffb74d", borderRadius: "999px", padding: "2px 10px", fontWeight: 700, fontSize: "12px" }}>
+                                    ⏳ Pending
+                                  </span>
+                                ) : (
+                                  <span style={{ background: "rgba(76,175,80,0.18)", color: "#81c784", borderRadius: "999px", padding: "2px 10px", fontWeight: 700, fontSize: "12px" }}>
+                                    ✅ Confirmed
+                                  </span>
+                                )}
+                              </td>
+                              <td style={{ fontSize: "12px", color: "var(--black-lighter)" }}>
+                                {t.confirmedAt ? new Date(t.confirmedAt).toLocaleString() : "—"}
+                              </td>
+                              <td style={{ textAlign: "right" }}>
+                                <button
+                                  type="button"
+                                  className="btn-small btn-danger"
+                                  title="Delete this record"
+                                  onClick={() => {
+                                    if (window.confirm("Delete this transfer record?")) deleteTransfer(t.id);
+                                  }}
+                                  style={{ padding: "3px 8px", fontSize: "13px" }}
+                                >
+                                  🗑
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-        </>
-      )}
+        );
+      })()}
+
 
       {/* ── Products Table ── */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "32px", marginBottom: "12px" }}>

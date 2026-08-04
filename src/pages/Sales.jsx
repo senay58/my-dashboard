@@ -109,20 +109,25 @@ export default function Sales() {
           ════════════════════════════════════════════════════════════════════════ */}
       {lowStockAlerts.length > 0 && (
         <div className="alert alert-warning">
-          <div 
-            style={{ display: "flex", justifyContent: "space-between", cursor: "pointer", alignItems: "center" }}
-            onClick={() => setShowLowStock(!showLowStock)}
-          >
-            <span><strong>Low Stock Alert:</strong> {lowStockAlerts.length} item(s) have 3 or fewer units in shop stock.</span>
-            <span style={{ fontSize: "12px", fontWeight: "bold" }}>{showLowStock ? "▼" : "▶"}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <strong>⚠ Low Stock Alert:</strong>
+            <span>{lowStockAlerts.length} item(s) have 3 or fewer units in shop stock.</span>
+            <button
+              type="button"
+              className={`btn-small ${showLowStock ? "" : "btn-secondary"}`}
+              onClick={() => setShowLowStock(!showLowStock)}
+              style={{ fontSize: "12px", marginLeft: "auto" }}
+            >
+              {showLowStock ? "▲ Hide" : "▼ Show Items"}
+            </button>
           </div>
-          
+
           {showLowStock && (
-            <ul style={{ margin: "8px 0 0 0", paddingLeft: "20px" }}>
+            <ul style={{ margin: "10px 0 0 0", paddingLeft: "20px" }}>
               {lowStockAlerts.map((item, idx) => (
                 <li key={idx}>
                   {item.product.name} ({item.sizeRow.size}) —{" "}
-                  {item.sizeRow.shopStockQty} units remaining
+                  <strong>{item.sizeRow.shopStockQty}</strong> units remaining
                 </li>
               ))}
             </ul>
