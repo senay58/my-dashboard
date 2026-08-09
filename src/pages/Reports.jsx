@@ -52,11 +52,16 @@ export default function Reports() {
     Number(v || 0).toLocaleString("en-ET", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const handlePrint = () => {
-    const allSales = sales.slice().sort((a, b) => (a.date < b.date ? -1 : 1));
-    const allTotalQty = allSales.reduce((sum, s) => sum + (Number(s.qty) || 0), 0);
-    const allTotalAmount = allSales.reduce((sum, s) => sum + (Number(s.total) || 0), 0);
-    const allDaily = getDailySummary(sales, {}); // unfiltered
-    const allMonthly = getMonthlySummary(sales, {}); // unfiltered
+    // Use the already-filtered data — respects fromDate, toDate, productFilter
+    const printSales = filteredSales.slice().sort((a, b) => (a.date < b.date ? -1 : 1));
+    const printTotalQty = printSales.reduce((sum, s) => sum + (Number(s.qty) || 0), 0);
+    const printTotalAmount = printSales.reduce((sum, s) => sum + (Number(s.total) || 0), 0);
+
+    const fromLabel = fromDate || "All";
+    const toLabel = toDate || "All";
+    const productLabel = productFilter
+      ? products.find((p) => p.id === productFilter)?.name || "All"
+      : "All";
 
     const printWindow = window.open("", "_blank");
     const content = `
@@ -77,67 +82,65 @@ export default function Reports() {
         <body>
           <h1>
             <img src="/logo.png" alt="JEGNIT Logo" />
-            <span>JEGNIT Inventory Tracking System - Full Sales Report</span>
+            <span>JEGNIT Inventory Tracking System - Sales Report</span>
           </h1>
           <div class="summary">
-            <p><strong>Date Range (filters on screen):</strong> ${fromDate || "All"} to ${toDate || "All"}</p>
-            <p><strong>Product filter (on screen):</strong> ${productFilter ? products.find(p => p.id === productFilter)?.name || "All" : "All"
-      }</p>
-            <p><strong>Total Quantity (all sales):</strong> ${allTotalQty}</p>
-            <p><strong>Total Amount (all sales):</strong> ETB ${allTotalAmount
-        .toLocaleString("en-ET", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p><strong>Date Range:</strong> ${fromLabel} to ${toLabel}</p>
+            <p><strong>Product Filter:</strong> ${productLabel}</p>
+            <p><strong>Total Quantity:</strong> ${printTotalQty}</p>
+            <p><strong>Total Amount:</strong> ETB ${printTotalAmount.toLocaleString("en-ET", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </div>
-          <h2>Daily Summary (All Sales)</h2>
+          <h2>Daily Summary</h2>
           <table>
             <thead>
               <tr><th>Date</th><th>Qty</th><th>Amount (ETB)</th></tr>
             </thead>
             <tbody>
-              ${allDaily
-        .map(
-          (r) =>
-            `<tr><td>${r.date}</td><td>${r.qty}</td><td>${Number(r.total || 0).toLocaleString("en-ET", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}</td></tr>`
-        )
-        .join("")}
+              ${daily
+                .map(
+                  (r) =>
+                    `<tr><td>${r.date}</td><td>${r.qty}</td><td>${Number(r.total || 0).toLocaleString("en-ET", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}</td></tr>`
+                )
+                .join("")}
             </tbody>
           </table>
-          <h2>Monthly Summary (All Sales)</h2>
+          <h2>Monthly Summary</h2>
           <table>
             <thead>
               <tr><th>Month</th><th>Qty</th><th>Amount (ETB)</th></tr>
             </thead>
             <tbody>
-              ${allMonthly
-        .map(
-          (r) =>
-            `<tr><td>${r.month}</td><td>${r.qty}</td><td>${Number(r.total || 0).toLocaleString("en-ET", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}</td></tr>`
-        )
-        .join("")}
+              ${monthly
+                .map(
+                  (r) =>
+                    `<tr><td>${r.month}</td><td>${r.qty}</td><td>${Number(r.total || 0).toLocaleString("en-ET", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}</td></tr>`
+                )
+                .join("")}
             </tbody>
           </table>
-          <h2>Sales Detail (Every Recorded Sale)</h2>
+          <h2>Sales Detail</h2>
           <table>
             <thead>
               <tr><th>Date</th><th>Product</th><th>Size</th><th>Qty</th><th>Total (ETB)</th><th>Payment</th><th>Ref. Number</th><th>Delivery</th></tr>
             </thead>
             <tbody>
-              ${allSales
-        .map(
-          (s) =>
-            `<tr><td>${s.date}</td><td>${s.productName}</td><td>${s.size}</td><td>${s.qty}</td><td>${Number(
-              s.total || 0
-            ).toLocaleString("en-ET", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}</td><td>${s.paymentMethod}</td><td>${s.refNum || "—"}</td><td>${s.deliveryType}</td></tr>`
-        )
-        .join("")}
+              ${printSales
+                .map(
+                  (s) =>
+                    `<tr><td>${s.date}</td><td>${s.productName}</td><td>${s.size}</td><td>${s.qty}</td><td>${Number(
+                      s.total || 0
+                    ).toLocaleString("en-ET", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}</td><td>${s.paymentMethod}</td><td>${s.refNum || "—"}</td><td>${s.deliveryType}</td></tr>`
+                )
+                .join("")}
             </tbody>
           </table>
         </body>
@@ -166,6 +169,7 @@ export default function Reports() {
   };
 
   return (
+
     <GlassCard title="Reports (Admin)">
       <div className="alert alert-info">
         Filter by date and product name for on-screen analysis. When you print, the report will always include every
