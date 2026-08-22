@@ -46,6 +46,23 @@ const fetchRemoteState = async () => {
   return data || null;
 };
 
+/**
+ * Merge two arrays by `id`, preferring the remote version when both exist.
+ * Records that exist only locally are preserved (never lost due to sync gaps).
+ */
+const mergeById = (remote = [], local = []) => {
+  const map = new Map();
+  // First load local records
+  for (const item of local) {
+    if (item?.id) map.set(item.id, item);
+  }
+  // Remote records overwrite local (remote is authoritative for shared data)
+  for (const item of remote) {
+    if (item?.id) map.set(item.id, item);
+  }
+  return Array.from(map.values());
+};
+
 export function InventoryProvider({ children }) {
   // FIX: call loadInitialState exactly once (previously called 3 separate times)
   const [initState] = useState(() => loadInitialState());
@@ -70,16 +87,17 @@ export function InventoryProvider({ children }) {
     }
   }, [products, sales, replacements, transfers]);
 
-  // Load from Supabase on first mount
+  // Load from Supabase on first mount — merge with local so no records are lost
   useEffect(() => {
     if (!supabase || remoteLoaded) return;
     (async () => {
       const remote = await fetchRemoteState();
       if (remote) {
-        setProducts(remote.products || []);
-        setSales(remote.sales || []);
-        setReplacements(remote.replacements || []);
-        setTransfers(remote.transfers || []);
+        // Merge: remote is authoritative but local-only records are preserved
+        setProducts((local) => mergeById(remote.products || [], local));
+        setSales((local) => mergeById(remote.sales || [], local));
+        setReplacements((local) => mergeById(remote.replacements || [], local));
+        setTransfers((local) => mergeById(remote.transfers || [], local));
       }
       setRemoteLoaded(true);
     })();
