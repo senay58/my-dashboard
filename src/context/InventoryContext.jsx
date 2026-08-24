@@ -24,9 +24,19 @@ const loadInitialState = () => {
       return { products: [], sales: [], replacements: [], transfers: [] };
     }
     const parsed = JSON.parse(raw);
+    
+    // Filter test dates so they don't load from cache
+    let loadedSales = parsed.sales || [];
+    loadedSales = loadedSales.filter(s => {
+      if (s.date) {
+        if (s.date < "2026-06-01" || s.date >= "2026-09-01") return false;
+      }
+      return true;
+    });
+
     return {
       products: parsed.products || [],
-      sales: parsed.sales || [],
+      sales: loadedSales,
       replacements: parsed.replacements || [],
       transfers: parsed.transfers || [],
     };
@@ -63,6 +73,18 @@ const mergeById = (remote = [], local = []) => {
   return Array.from(map.values());
 };
 
+const filterTestSales = (salesArray) => {
+  return salesArray.filter(s => {
+    // If it's a sale record (has date and total), filter test dates
+    if (s.date && s.total !== undefined) {
+      const isBeforeJune = s.date < "2026-06-01";
+      const isFutureTest = s.date >= "2026-09-01";
+      if (isBeforeJune || isFutureTest) return false;
+    }
+    return true;
+  });
+};
+
 export function InventoryProvider({ children }) {
   // FIX: call loadInitialState exactly once (previously called 3 separate times)
   const [initState] = useState(() => loadInitialState());
@@ -95,7 +117,7 @@ export function InventoryProvider({ children }) {
       if (remote) {
         // Merge: remote is authoritative but local-only records are preserved
         setProducts((local) => mergeById(remote.products || [], local));
-        setSales((local) => mergeById(remote.sales || [], local));
+        setSales((local) => filterTestSales(mergeById(remote.sales || [], local)));
         setReplacements((local) => mergeById(remote.replacements || [], local));
         setTransfers((local) => mergeById(remote.transfers || [], local));
       }
