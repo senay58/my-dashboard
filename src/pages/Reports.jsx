@@ -365,7 +365,23 @@ export default function Reports() {
                                 <tr key={s.id} style={{ borderBottom: "1px solid rgba(0, 0, 0, 0.05)" }}>
                                   <td style={{ padding: "8px 12px", fontWeight: 600 }}>{s.productName}</td>
                                   <td style={{ padding: "8px 12px" }}>{s.size}</td>
-                                  <td style={{ padding: "8px 12px" }}>{s.qty}</td>
+                                  <td style={{ padding: "8px 12px" }}>
+                                    {s.qty}
+                                    {(Number(s.qty) === 0 || s.status === 'returned') && (
+                                      <span style={{ 
+                                        marginLeft: "8px", 
+                                        fontSize: "10px", 
+                                        background: "var(--red)", 
+                                        color: "white", 
+                                        padding: "2px 6px", 
+                                        borderRadius: "12px", 
+                                        fontWeight: 600,
+                                        textTransform: "uppercase"
+                                      }}>
+                                        Exchanged
+                                      </span>
+                                    )}
+                                  </td>
                                   <td style={{ padding: "8px 12px" }}>ETB {fmtETB(s.total)}</td>
                                   <td style={{ padding: "8px 12px" }}>{s.paymentMethod}</td>
                                   <td style={{ padding: "8px 12px" }}>
