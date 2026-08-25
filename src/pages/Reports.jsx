@@ -371,12 +371,13 @@ export default function Reports() {
                                       <span style={{ 
                                         marginLeft: "8px", 
                                         fontSize: "10px", 
-                                        background: "var(--red)", 
+                                        background: "#ef4444", 
                                         color: "white", 
                                         padding: "2px 6px", 
                                         borderRadius: "12px", 
                                         fontWeight: 600,
-                                        textTransform: "uppercase"
+                                        textTransform: "uppercase",
+                                        letterSpacing: "0.5px"
                                       }}>
                                         Exchanged
                                       </span>
