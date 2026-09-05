@@ -92,7 +92,9 @@ const blockedDuplicateIds = new Set([
   "2051aaa3-6b05-4bf7-bd34-9c7abaf46925","392c6109-3e35-40d9-8682-421ddc708f12","b45f885d-e924-42ef-bd73-6395564ded33",
   "113849e4-82ad-4659-8cf5-4327b12c6cca","458d0295-02fd-4503-96e2-9c0595becd5b","97cc6d4c-38b1-4cdb-b0dd-c656782fee22",
   "1a9425c9-0a55-46b5-acaf-fc5eb21bb849","9e997a29-d5bf-44cf-9dbd-820061bf1069","d1c6d2e0-d125-4fcf-a4db-cc8f27f429b9",
-  "4eed9497-eef1-4821-991a-62258d7097f1","2b9b9bd8-266e-4a80-bd63-72e52ff3af68","6e8e1c06-1c52-4649-be98-fcd6ae8eb5e5"
+  "4eed9497-eef1-4821-991a-62258d7097f1","2b9b9bd8-266e-4a80-bd63-72e52ff3af68","6e8e1c06-1c52-4649-be98-fcd6ae8eb5e5",
+  "ef356166-867b-496c-8b8e-ab854133a91b",
+  "ff1be5db-059d-4607-8287-f71f6f2551bf"
 ]);
 
 const filterTestSales = (salesArray) => {
