@@ -16,6 +16,8 @@ const createId = () => {
 
 const InventoryContext = createContext(null);
 
+const TEST_PRODUCT_ID = "b8fc5c6c-d346-456e-8c5d-73f2a231aadf";
+
 // FIX: loadInitialState now also returns transfers; called once via useState lazy init
 const loadInitialState = () => {
   try {
@@ -37,8 +39,10 @@ const loadInitialState = () => {
       return true;
     });
 
+    let loadedProducts = (parsed.products || []).filter(p => p.id !== TEST_PRODUCT_ID);
+
     return {
-      products: parsed.products || [],
+      products: loadedProducts,
       sales: loadedSales,
       replacements: parsed.replacements || [],
       transfers: parsed.transfers || [],
@@ -145,7 +149,7 @@ export function InventoryProvider({ children }) {
       const remote = await fetchRemoteState();
       if (remote) {
         // Merge: remote is authoritative but local-only records are preserved
-        setProducts((local) => mergeById(remote.products || [], local));
+        setProducts((local) => mergeById(remote.products || [], local).filter(p => p.id !== TEST_PRODUCT_ID));
         setSales((local) => filterTestSales(mergeById(remote.sales || [], local)));
         setReplacements((local) => mergeById(remote.replacements || [], local));
         setTransfers((local) => mergeById(remote.transfers || [], local));
