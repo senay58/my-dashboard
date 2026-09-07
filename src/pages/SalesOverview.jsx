@@ -32,11 +32,10 @@ export default function SalesOverview() {
     return summary;
   }, [sales, getMonthlySummary]);
 
-  /* Group recent sales by date (newest first, capped at 100 individual sales) */
+  /* Group sales by date (sorted newest first) */
   const salesByDate = useMemo(() => {
-    const recent = (sales || []).slice().reverse().slice(0, 100);
     const map = {};
-    recent.forEach((s) => {
+    (sales || []).forEach((s) => {
       if (!map[s.date]) map[s.date] = [];
       map[s.date].push(s);
     });
