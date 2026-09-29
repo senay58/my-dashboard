@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 
 const STORAGE_KEY = "jegnit-inventory-data-v1";
@@ -130,6 +130,8 @@ export function InventoryProvider({ children }) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState(null);
 
+  const isApplyingRemote = useRef(false);
+
   // Persist everything (including transfers) to localStorage
   useEffect(() => {
     try {
@@ -148,19 +150,69 @@ export function InventoryProvider({ children }) {
     (async () => {
       const remote = await fetchRemoteState();
       if (remote) {
-        // Merge: remote is authoritative but local-only records are preserved
+        isApplyingRemote.current = true;
         setProducts((local) => mergeById(remote.products || [], local).filter(p => p.id !== TEST_PRODUCT_ID));
         setSales((local) => filterTestSales(mergeById(remote.sales || [], local)));
         setReplacements((local) => mergeById(remote.replacements || [], local));
         setTransfers((local) => mergeById(remote.transfers || [], local));
+        setTimeout(() => {
+          isApplyingRemote.current = false;
+        }, 100);
       }
       setRemoteLoaded(true);
     })();
   }, [remoteLoaded]);
 
-  // Sync to Supabase whenever state changes
+  // Live real-time subscription: listen for updates from other clients in real time
+  useEffect(() => {
+    if (!supabase) return;
+
+    const channel = supabase
+      .channel("public:inventory_state_v1")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: REMOTE_TABLE,
+          filter: "id=eq.1",
+        },
+        (payload) => {
+          const newRecord = payload.new;
+          if (!newRecord) return;
+
+          isApplyingRemote.current = true;
+          if (newRecord.products) {
+            setProducts((local) =>
+              mergeById(newRecord.products || [], local).filter((p) => p.id !== TEST_PRODUCT_ID)
+            );
+          }
+          if (newRecord.sales) {
+            setSales((local) => filterTestSales(mergeById(newRecord.sales || [], local)));
+          }
+          if (newRecord.replacements) {
+            setReplacements((local) => mergeById(newRecord.replacements || [], local));
+          }
+          if (newRecord.transfers) {
+            setTransfers((local) => mergeById(newRecord.transfers || [], local));
+          }
+          setTimeout(() => {
+            isApplyingRemote.current = false;
+          }, 100);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Sync to Supabase whenever local state changes (skipped when applying remote updates)
   useEffect(() => {
     if (!supabase || !remoteLoaded) return;
+    if (isApplyingRemote.current) return;
+
     const sync = async () => {
       setIsSyncing(true);
       setSyncError(null);
