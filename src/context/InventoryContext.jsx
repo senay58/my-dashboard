@@ -32,9 +32,8 @@ const loadInitialState = () => {
     loadedSales = loadedSales.filter(s => {
       if (s.date) {
         const isBeforeJune = s.date < "2026-06-01";
-        const isFakeSept19 = s.date === "2026-09-19";
         const isFakeOct19 = s.date === "2026-10-19";
-        if (isBeforeJune || isFakeSept19 || isFakeOct19) return false;
+        if (isBeforeJune || isFakeOct19) return false;
       }
       return true;
     });
@@ -109,10 +108,9 @@ const filterTestSales = (salesArray) => {
     // If it's a sale record (has date and total), filter test dates
     if (s.date && s.total !== undefined) {
       const isBeforeJune = s.date < "2026-06-01";
-      const isFakeSept19 = s.date === "2026-09-19";
       const isFakeOct19 = s.date === "2026-10-19";
       const isFakeAug19 = (s.date === "2026-08-19" && s.productName === "Code 1" && s.total === 1000);
-      if (isBeforeJune || isFakeSept19 || isFakeOct19 || isFakeAug19) return false;
+      if (isBeforeJune || isFakeOct19 || isFakeAug19) return false;
     }
     return true;
   });
