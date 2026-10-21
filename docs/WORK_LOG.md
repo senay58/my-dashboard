@@ -81,11 +81,11 @@ running live system and all records, and keep durable project/work context.
 
 ### Next work, in order
 
-1. Refresh every staff device without clearing site data, then use Export device
-   backup and preserve/reconcile old device records. Do not re-enter the existing
-   September/October sales. Staff-device exports have not been provided yet.
-2. User runs `supabase/activate-safe-saves.sql` after updated-device checks and
-   exports. This is still pending; legacy clients remain permitted during rollout.
+1. Ask staff to refresh before their next sale, without clearing site data. The user
+   cannot access their phones and reports consistent data. Device exports are not
+   required to proceed with protection; historical device reconciliation is unverified.
+2. User runs `supabase/activate-safe-saves.sql`. This is still pending; legacy
+   clients remain permitted during rollout. Do not re-enter existing historical sales.
 3. Verify activation, all active clients, and the next legitimate sale through a
    second device/reload. Take a fresh backup and compare historical IDs/counts.
 4. Update this log with exact activation evidence. Then handle the
@@ -95,3 +95,19 @@ The incident is **deployed and verified for live historical visibility, awaiting
 final legacy-write activation and device reconciliation**.
 Do not claim that all missing sales were recovered or that future data loss is
 impossible. Do not re-create September/October records from memory or scripts.
+
+## 2026-10-21 — simplify the status banner
+
+- User requested removal of the two buttons above the pages, reports consistent
+  data, and cannot access staff phones. Removed Retry / refresh and Export device
+  backup from the shared banner. Save-status/error messages and automatic retries
+  are retained. Business data, queues and original cached recovery data are untouched.
+- Clarified that physical phone access is not needed for final SQL activation;
+  unavailable exports are not a prerequisite. Staff should refresh before their
+  next sale because the old frontend can still show success before server rejection.
+- No guarantee of perfect future operation was made. Activation and independent
+  backups remain important; original authentication/RLS limitations are documented.
+- Validation: all 16 existing regression tests and the production build passed.
+  This follow-up changes only the banner and project documentation; automatic sync
+  and database write behavior are unchanged. Deployment uses the existing Git main
+  integration. Final SQL activation is still user-run and unconfirmed.

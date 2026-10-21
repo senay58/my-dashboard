@@ -100,7 +100,8 @@ Raw backups and local screenshot evidence are ignored by the outer Git repositor
    for review and never auto-replayed. Poll/focus/online/storage/realtime events
    refresh/retry through one serialized worker. Local persistence failures surface.
 6. Sales UI shows confirmed, pending or rejected outcomes and prevents double-click
-   submission. Global status offers refresh and device export. No date exclusions.
+   submission. The global banner shows save status; its refresh/export buttons were
+   removed at the user's request. Automatic retries and preserved caches remain.
 
 The protocol protects cooperative client consistency. It is not a replacement for
 real authentication or server-side business authorization. A malicious caller with
@@ -127,8 +128,10 @@ returned rows consistently. Bulk reset is disabled to protect live records.
 
 ## Remaining risks and follow-up priorities
 
-1. Finish rollout with staff-device exports and user-run phase-two activation. The
-   repaired frontend is deployed and phase-one SQL was installed by the user.
+1. Finish rollout with user-run phase-two activation. The user cannot access staff
+   phones and reports that the data is consistent. Device exports are not a blocking
+   prerequisite; ask staff to refresh before their next sale, preserving site data.
+   The repaired frontend is deployed and phase-one SQL was installed by the user.
 2. Review device exports and original staff records for additional missing sales.
    A missing database row alone does not prove whether stock was already deducted.
 3. Replace client-only email/password comparison and plaintext local credentials

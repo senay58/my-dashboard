@@ -1,8 +1,14 @@
 # Safe operation and release procedure
 
 The user chose to run the production SQL themselves. SQL installation and website
-deployment are separate actions. Do not mark the incident resolved until both
-stages are verified on production and affected devices have been reconciled.
+deployment are separate actions. Both stages must be verified on production. The
+user reports consistent data but cannot access staff phones; historical device
+reconciliation remains unverified and does not block activating safe saves.
+
+The two global Retry / refresh and Export device backup buttons were removed at
+the user's request. Automatic retries, error/status messages, original caches and
+the internal recovery export function remain. Do not ask users to click those
+removed buttons. Reloading the page also triggers sync without clearing site data.
 
 ## Install this repair
 
@@ -25,13 +31,16 @@ stages are verified on production and affected devices have been reconciled.
    from `senay58/my-dashboard` to the verified Vercel project. Do not deploy the
    outer backend scaffold. Keep the production Supabase variables on that project.
    A build without them cannot confirm sales. Never deploy the local test API URL.
-6. Have staff use the updated app. Its original v1 cache is preserved before cloud
-   loading; use **Export device backup** on each affected device. Compare exported
-   old records against current database IDs. Do not automatically merge caches.
+6. Ask staff to refresh the website before their next sale; physical access to their
+   phones is not required. Its original v1 cache is preserved before cloud loading.
+   If device data later becomes available, preserve and compare old records against
+   database IDs. Do not automatically merge caches or clear site data.
    Verify the existing October 19 rows are visible; there is no need to insert test
    sales into production. For the next legitimate sale, check cloud confirmation,
    one stock deduction, history on a second device, and persistence after reload.
-7. After exports and updated-device checks, run `supabase/activate-safe-saves.sql`.
+7. After deploying and verifying v2, run `supabase/activate-safe-saves.sql`. The old
+   header mentions exports; unavailable phone exports are not a prerequisite under
+   the user's updated workflow.
    Old browsers then receive a refresh error instead of being allowed to overwrite
    current stock. Refresh every active tab. Run verification SQL and a fresh backup.
 8. Record the production commit/deployment ID, SQL results, counts and affected
@@ -53,10 +62,16 @@ was installed. Device-only sales and receipts still require reconciliation.
 - First check raw database records for the business date, not only report totals.
   Preserve stable IDs, status, quantity, total and payment references for comparison.
 - Pending in v2 means the command is on that device but the cloud has not confirmed.
-  Do not enter it again. Use Retry / refresh. Online/focus/polling also retry it.
+  Do not enter it again. Online/focus/polling retry automatically; reloading also
+  resumes the saved command without clearing site data.
 - Rejected means current business validation failed, for example another device
   sold the last item. It is retained for review and never auto-retried later.
-- Use Export device backup before troubleshooting or changing browser profiles.
+- Preserve device site data before troubleshooting or changing browser profiles.
+  Request developer-assisted recovery if the original device becomes available.
+
+An old pre-v2 tab still has its original misleading success message. Activation
+blocks its database writes but cannot replace JavaScript already running on a
+phone. Ask staff to reload before the next sale, even without direct phone access.
 - Confirm whether stock was already deducted before restoring any missing sale.
   Never run `insert_sept19_sales.js` or `recover_sales.js` as a generic repair: they
   generate IDs and overwrite full arrays without current concurrency protection.
