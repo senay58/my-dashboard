@@ -23,6 +23,8 @@ Payment options: Cash, CBE, Telebirr, BOA, Dashen Bank, Awash Bank.
 | Production branch | main |
 | Production commit at investigation | cc5b44416183541592571a16c78cd045eb6195b3 |
 | Production deployment at investigation | dpl_6xsNCwLJZwhrXsJy5etdMDiXYmaw |
+| Repaired production commit (2026-10-21) | 0132935dce612ef72928da65d50e7a236d93680b |
+| Repaired production deployment | dpl_HrCS8qNNn3hkWCazPAFqQMBhzdBQ |
 | Outer repository | senay58/jegnit-inventory (contains frontend Git link) |
 | Supabase project reference | fdsebosoendtafpomjnq |
 | Data location | public.inventory_state_v1, singleton id=1 |
@@ -79,7 +81,7 @@ Backup: outer `backups/inventory-2026-10-21T10-49-40-189Z.json`, SHA-256:
 `0117e0b116db38815bcc558db04a06712b547f56f9dd851cce3729295dcd7e29`.
 Raw backups and local screenshot evidence are ignored by the outer Git repository.
 
-## Implemented v2 flow (pending production rollout)
+## Implemented v2 flow (deployed; final legacy-write activation pending)
 
 1. `src/inventory/store.mjs` preserves the original v1 browser cache and stores each
    command under its own UUID outbox key before any request. Confirmed cache is a
@@ -125,7 +127,8 @@ returned rows consistently. Bulk reset is disabled to protect live records.
 
 ## Remaining risks and follow-up priorities
 
-1. Finish production rollout; local fixes do not change the live version by themselves.
+1. Finish rollout with staff-device exports and user-run phase-two activation. The
+   repaired frontend is deployed and phase-one SQL was installed by the user.
 2. Review device exports and original staff records for additional missing sales.
    A missing database row alone does not prove whether stock was already deducted.
 3. Replace client-only email/password comparison and plaintext local credentials

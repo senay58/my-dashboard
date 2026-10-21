@@ -7,13 +7,16 @@ running live system and all records, and keep durable project/work context.
 
 ### Production state at handoff
 
-- **Not deployed. Production SQL has not been run by the agent.** User explicitly
-  chose to receive and run the tested SQL themselves. Await their installation
-  result before deploying the v2 frontend.
-- Production was verified as `cc5b444` from `senay58/my-dashboard`; live Vercel
-  project and Supabase reference are in PROJECT_CONTEXT.md.
-- Only read-only production HTTP/database/metadata requests were performed. No
-  sale insertion, stock adjustment, cleanup, migration or reset was run there.
+- **v2 deployed; final legacy-write guard and staff-device reconciliation pending.**
+  The user ran phase-one SQL and reported success. Read-only RPC verification
+  returned `ready`, revision 0, all 472 sales and no missing pre-migration sale IDs.
+  The user still intends to run production SQL themselves; do not apply phase two.
+- Repair release source: `0132935dce612ef72928da65d50e7a236d93680b`, deployed from
+  `senay58/my-dashboard` main. Production deployment:
+  `dpl_HrCS8qNNn3hkWCazPAFqQMBhzdBQ`, verified READY on the original live domain.
+  Subsequent documentation-only commits can rebuild the identical application.
+- Database checks remained read-only. The agent pushed/deployed the frontend, but
+  did not insert a sale, adjust stock, run a migration/cleanup, or reset production.
 - A timestamped raw snapshot and SHA-256 were saved under outer `backups/` and
   excluded from Git. Two October 19 sales already exist (ETB 19,300) and six
   September 19 sales exist (ETB 56,500). Completeness beyond these is unconfirmed.
@@ -22,8 +25,9 @@ running live system and all records, and keep durable project/work context.
   `7584982beb08544a1c74d71c29c0c83081a4bcbad72c4a2ad61a029a266e0eca`.
 - Existing untracked `check_target_prods.js`, `insert_sept19_sales.js`, and
   `verify_sept19.js` were left untouched and were not executed.
-- Repair source is on local branch `codex/safe-sales-persistence` in the frontend
-  repository. No remote push or production deployment was triggered.
+- Repair source is on `codex/safe-sales-persistence` and was pushed to that remote
+  branch, verified in preview, then fast-forwarded to remote main for production.
+  The pre-existing untracked scripts remain untouched.
 
 ### Findings and implemented changes
 
@@ -63,19 +67,31 @@ running live system and all records, and keep durable project/work context.
   includes synthetic test sales; do not confuse it with the production baseline.
 - Production build passed. Existing warnings concern module format, old Browserslist
   data and a large bundle; no new dependency was introduced.
+- Deployment verification: preview `dpl_6MK84aYC7AYQ8UwbMyaP1Mj5YCbr` built READY.
+  Its authenticated JS asset matched the tested local bundle and used the correct
+  Supabase project and new RPC with no October 19 filter. The live production alias
+  then served the same `/assets/index-CwIAguo-.js` bundle.
+- Live browser verification: cloud status verified; Sales Overview showed October 19
+  as 2 sales / ETB 19,300 and September 19 as 6 sales / ETB 56,500. October 19 survived
+  reload. No production test sale was created. Screenshot:
+  outer `backups/live-oct19-history.png`. Post-deploy backup confirmed all four
+  business arrays are identical to the pre-migration backup.
+- Post-deploy backup: `inventory-2026-10-21T11-21-09-117Z.json`, SHA-256
+  `0911f14ad7cd6c256ae4f01b56ee0d551e15c207585a654c6aa597facbaaa4d0`.
 
 ### Next work, in order
 
-1. User runs `supabase/migrations/20261021_safe_inventory.sql` in the verified
-   Supabase SQL Editor, then provides success/error and read-only verification.
-2. Verify RPC readiness and unchanged historical records with read-only requests;
-   deploy this frontend to the existing Vercel project (no outer-repo deployment).
-3. Export/reconcile affected staff-device data, verify existing historical rows and
-   the next legitimate sale through a second device/reload.
-4. User runs `supabase/activate-safe-saves.sql`; refresh active clients and verify.
-5. Update this log with exact deployment/activation evidence. Then handle the
+1. Refresh every staff device without clearing site data, then use Export device
+   backup and preserve/reconcile old device records. Do not re-enter the existing
+   September/October sales. Staff-device exports have not been provided yet.
+2. User runs `supabase/activate-safe-saves.sql` after updated-device checks and
+   exports. This is still pending; legacy clients remain permitted during rollout.
+3. Verify activation, all active clients, and the next legitimate sale through a
+   second device/reload. Take a fresh backup and compare historical IDs/counts.
+4. Update this log with exact activation evidence. Then handle the
    authentication/RLS and independent backup follow-ups described in PROJECT_CONTEXT.
 
-The incident is **prepared and locally verified, awaiting production rollout**.
+The incident is **deployed and verified for live historical visibility, awaiting
+final legacy-write activation and device reconciliation**.
 Do not claim that all missing sales were recovered or that future data loss is
 impossible. Do not re-create September/October records from memory or scripts.
