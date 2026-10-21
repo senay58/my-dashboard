@@ -16,6 +16,7 @@ import SalesOverview from "./pages/SalesOverview.jsx";
 import Settings from "./pages/Settings.jsx";
 import Transfers from "./pages/Transfers.jsx";
 import { useInventory } from "./context/InventoryContext.jsx";
+import InventoryStatus from "./components/InventoryStatus.jsx";
 
 const AUTH_KEY = "jegnit-inventory-auth";
 
@@ -26,7 +27,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // FIX: call useInventory at top level, not inside JSX IIFEs
-  const { isSyncing, syncError, supabaseConfigured } = useInventory();
+  const { isSyncing, syncError, supabaseConfigured, ready, pendingCount } = useInventory();
 
   // Desktop only: collapse sidebar. On mobile the sidebar is a full drawer.
   const handleSidebarLogoClick = () => {
@@ -86,6 +87,8 @@ export default function App() {
     <span style={{ color: "#fdba74" }}>● Local Storage Only</span>
   ) : syncError ? (
     <span style={{ color: "#fca5a5" }}>● Sync Error</span>
+  ) : !ready || pendingCount ? (
+    <span style={{ color: "#fdba74" }}>● {ready ? "Awaiting Confirmation" : "Connecting"}</span>
   ) : isSyncing ? (
     <span className="animate-pulse" style={{ color: "#bfdbfe" }}>
       ● Syncing Cloud...
@@ -98,6 +101,8 @@ export default function App() {
     <span style={{ color: "#fdba74" }}>● Local</span>
   ) : syncError ? (
     <span style={{ color: "#fca5a5" }}>● Error</span>
+  ) : !ready || pendingCount ? (
+    <span style={{ color: "#fdba74" }}>● {ready ? "Pending" : "Connecting"}</span>
   ) : isSyncing ? (
     <span className="animate-pulse" style={{ color: "#bfdbfe" }}>
       ● Syncing
@@ -253,6 +258,7 @@ export default function App() {
               {syncBadgeMini}
             </div>
           </div>
+          <InventoryStatus />
           <Routes>
             {role === "admin" && (
               <>

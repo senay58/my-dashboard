@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import GlassCard from "../components/GlassCard.jsx";
 import "../index.css";
 import { useInventory } from "../context/InventoryContext.jsx";
+import { businessDate } from "../inventory/dates.mjs";
 
 export default function AdminDashboard() {
   const { products, sales, replacements, transfers, getMonthlySummary, resetAllData } = useInventory();
@@ -31,12 +32,12 @@ export default function AdminDashboard() {
     [products]
   );
   const totalSalesAmount = useMemo(
-    () => sales.reduce((sum, s) => sum + (Number(s.total) || 0), 0),
+    () => sales.filter(s => s.status !== "returned").reduce((sum, s) => sum + (Number(s.total) || 0), 0),
     [sales]
   );
-  const today = new Date().toISOString().slice(0, 10);
+  const today = businessDate();
   const todaySalesQty = sales
-    .filter((s) => s.date === today)
+    .filter((s) => s.date === today && s.status !== "returned")
     .reduce((sum, s) => sum + (Number(s.qty) || 0), 0);
 
   const monthlySummary = useMemo(

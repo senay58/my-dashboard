@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import GlassCard from "../components/GlassCard.jsx";
 import { useInventory } from "../context/InventoryContext.jsx";
+import { receiptMessage } from "../inventory/store.mjs";
 
 const fmt = (n) =>
   Number(n || 0).toLocaleString("en-ET", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -99,7 +100,7 @@ export default function Replacements() {
   };
 
   // ─── Submit ──────────────────────────────────────────────────────────────────
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
     setOk("");
     setErr("");
@@ -108,7 +109,7 @@ export default function Replacements() {
       return;
     }
     try {
-      recordMultiReplacement({
+      const receipt = await recordMultiReplacement({
         saleId,
         returnQty: Number(returnQty),
         exchangeItems: exchangeList.map((i) => ({
@@ -117,7 +118,8 @@ export default function Replacements() {
           qty: i.qty,
         })),
       });
-      setOk("✅ Replacement processed successfully! Stock and sales records updated.");
+      if (receipt.status === "rejected") throw new Error(receipt.message);
+      setOk(receiptMessage(receipt, "Replacement confirmed in cloud. Stock and sales records updated."));
       resetForm();
       setTimeout(() => setOk(""), 5000);
     } catch (error) {

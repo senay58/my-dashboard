@@ -3,7 +3,7 @@ import GlassCard from "../components/GlassCard.jsx";
 import { useInventory } from "../context/InventoryContext.jsx";
 
 export default function Settings() {
-  const { resetAllData, isSyncing, syncError, supabaseConfigured } = useInventory();
+  const { resetAllData, isSyncing, syncError, supabaseConfigured, ready, pendingCount } = useInventory();
 
   // ─── Editable login credentials ─────────────────────────────────────────────
   const [adminEmail, setAdminEmail] = useState("admin@jegnit.com");
@@ -48,7 +48,7 @@ export default function Settings() {
     }
   };
 
-  const handleResetAll = (e) => {
+  const handleResetAll = async (e) => {
     e.preventDefault();
     setResetError("");
     setResetOk("");
@@ -64,8 +64,11 @@ export default function Settings() {
         "This will erase ALL products, sales, and replacements data from the system. This cannot be undone. Continue?"
       )
     ) {
-      resetAllData();
-      setResetOk("All inventory, sales, and replacements data has been reset.");
+      try {
+        await resetAllData();
+      } catch (error) {
+        setResetError(error.message);
+      }
     }
   };
 
@@ -83,21 +86,21 @@ export default function Settings() {
         <div className="info-box info-box-secondary">
           <div className="info-box-label">Supabase</div>
           <div className="info-box-value" style={{ fontSize: "16px" }}>
-            {supabaseConfigured ? "✅ Connected" : "⚠ Not Configured"}
+            {supabaseConfigured ? "✅ Configured" : "⚠ Not Configured"}
           </div>
           <div className="info-box-footer">
             {supabaseConfigured
-              ? "Data is synced to the cloud in real time."
-              : "Data is stored locally only. Set up .env to enable cloud sync."}
+              ? "Check the save status below for cloud confirmation."
+              : "Cloud configuration is required before new records can be saved."}
           </div>
         </div>
         <div className="info-box info-box-secondary">
           <div className="info-box-label">Sync Status</div>
           <div className="info-box-value" style={{ fontSize: "16px" }}>
-            {isSyncing ? "🔄 Syncing…" : syncError ? "❌ Error" : "✅ Idle"}
+            {syncError ? "❌ Error" : !ready ? "Connecting…" : pendingCount ? "Awaiting confirmation" : isSyncing ? "🔄 Syncing…" : "✅ Verified"}
           </div>
           <div className="info-box-footer">
-            {syncError ? syncError : "Last sync completed without errors."}
+            {syncError || (!ready ? "Waiting for cloud verification." : pendingCount ? "Keep this device’s site data until its entries are confirmed." : "Cloud records have been verified.")}
           </div>
         </div>
         <div className="info-box info-box-secondary">
@@ -157,8 +160,7 @@ export default function Settings() {
         ⚠ Danger Zone — Reset All Data
       </h3>
       <div className="alert alert-warning" style={{ fontSize: "13px", marginBottom: "16px" }}>
-        <strong>Warning:</strong> This action will permanently erase ALL products, sales, replacements, and transfer records.
-        This cannot be undone. You must re-enter your admin credentials to confirm.
+        Bulk reset is disabled to protect live records. Export a backup and use a reviewed recovery procedure for data corrections.
       </div>
       <form onSubmit={handleResetAll} className="form-grid">
         <div className="form-group">
@@ -180,8 +182,8 @@ export default function Settings() {
           />
         </div>
         <div className="form-group">
-          <button type="submit" className="btn-danger">
-            Reset ALL Products, Sales & Replacements
+          <button type="submit" className="btn-danger" disabled>
+            Reset disabled for live records
           </button>
         </div>
       </form>

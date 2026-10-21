@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import GlassCard from "../components/GlassCard.jsx";
 import { useInventory } from "../context/InventoryContext.jsx";
+import { receiptMessage } from "../inventory/store.mjs";
 
 export default function Transfers() {
   const { products, transfers, confirmTransfer } = useInventory();
@@ -35,7 +36,7 @@ export default function Transfers() {
   const confirmedCount = transfers.filter((t) => t.status === "confirmed").length;
 
   // ─── Handler ────────────────────────────────────────────────────────────────
-  const handleConfirmTransfer = (transferId, transferQty, productName, sizeName) => {
+  const handleConfirmTransfer = async (transferId, transferQty, productName, sizeName) => {
     setConfirmingId(transferId);
     setConfirmOk("");
     setConfirmErr("");
@@ -55,9 +56,10 @@ export default function Transfers() {
     }
 
     try {
-      confirmTransfer(transferId);
+      const receipt = await confirmTransfer(transferId);
+      if (receipt.status === "rejected") throw new Error(receipt.message);
       setConfirmOk(
-        `✅ Confirmed! ${transferQty} unit(s) of ${productName} (${sizeName}) added to Shop stock.`
+        receiptMessage(receipt, `Confirmed in cloud. ${transferQty} unit(s) of ${productName} (${sizeName}) added to Shop stock.`)
       );
       setTimeout(() => setConfirmOk(""), 5000);
     } catch (error) {

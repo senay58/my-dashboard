@@ -1,6 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import GlassCard from "../components/GlassCard.jsx";
 import { useInventory } from "../context/InventoryContext.jsx";
+import { businessDate } from "../inventory/dates.mjs";
+import { receiptMessage } from "../inventory/store.mjs";
 
 export default function Sales() {
   const {
@@ -10,10 +12,14 @@ export default function Sales() {
     PAYMENT_METHODS,
     DELIVERY_TYPES,
     getLowStockItems,
+    ready,
+    pendingCount,
   } = useInventory();
 
   // ─── Sale form state ────────────────────────────────────────────────────────
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => businessDate());
+  const [saving, setSaving] = useState(false);
+  const submitting = useRef(false);
   const [productId, setProductId] = useState("");
   const [sizeId, setSizeId] = useState("");
   const [qty, setQty] = useState("");
@@ -21,6 +27,7 @@ export default function Sales() {
   const [deliveryType, setDeliveryType] = useState(DELIVERY_TYPES[0]);
   const [refNum, setRefNum] = useState("");
   const [ok, setOk] = useState("");
+  const [saleStatus, setSaleStatus] = useState(null);
   const [err, setErr] = useState("");
 
   // ─── Accordion expansion state ───────────────────────────────────────────────
@@ -66,8 +73,11 @@ export default function Sales() {
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true;
+    setSaving(true);
     setOk("");
     setErr("");
     try {
@@ -79,7 +89,7 @@ export default function Sales() {
       if (paymentMethod !== "Cash" && !refNum.trim()) {
         throw new Error("Reference number is required for bank/digital transfers.");
       }
-      recordSale({
+      const receipt = await recordSale({
         date,
         productId,
         sizeId,
@@ -88,13 +98,19 @@ export default function Sales() {
         deliveryType,
         refNum,
       });
-      setOk("Sale recorded. Shop stock updated.");
+      if (receipt.status === "rejected") {
+        setErr(receiptMessage(receipt));
+        return;
+      }
+      setOk(receiptMessage(receipt, "Sale confirmed in cloud. Shop stock updated."));
+      setSaleStatus(receipt.status);
       setQty("");
       setRefNum("");
-      setTimeout(() => setOk(""), 3000);
     } catch (error) {
       setErr(error?.message || "Could not record sale.");
-      setTimeout(() => setErr(""), 4000);
+    } finally {
+      submitting.current = false;
+      setSaving(false);
     }
   };
 
@@ -257,7 +273,9 @@ export default function Sales() {
         </div>
 
         <div className="form-group">
-          <button type="submit">Record Sale</button>
+          <button type="submit" disabled={saving || !ready || pendingCount > 0}>
+            {saving ? "Confirming sale…" : "Record Sale"}
+          </button>
         </div>
       </form>
 
@@ -281,7 +299,7 @@ export default function Sales() {
 
       {(ok || err) && (
         <div style={{ marginTop: "12px" }}>
-          {ok && <div className="alert alert-success">{ok}</div>}
+          {ok && <div role="status" className={`alert ${saleStatus === "pending" ? "alert-warning" : "alert-success"}`}>{ok}</div>}
           {err && <div className="alert alert-error">{err}</div>}
         </div>
       )}

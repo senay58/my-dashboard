@@ -37,16 +37,16 @@ export default function Reports() {
       .map(([date, items]) => ({
         date,
         items,
-        totalQty: items.reduce((sum, s) => sum + (Number(s.qty) || 0), 0),
-        totalAmount: items.reduce((sum, s) => sum + (Number(s.total) || 0), 0),
+        totalQty: items.filter(s => s.status !== "returned").reduce((sum, s) => sum + (Number(s.qty) || 0), 0),
+        totalAmount: items.filter(s => s.status !== "returned").reduce((sum, s) => sum + (Number(s.total) || 0), 0),
       }));
   }, [filteredSales]);
 
   const daily = useMemo(() => getDailySummary(sales, filters), [sales, filters, getDailySummary]);
   const monthly = useMemo(() => getMonthlySummary(sales, filters), [sales, filters, getMonthlySummary]);
 
-  const totalAmount = filteredSales.reduce((sum, s) => sum + (Number(s.total) || 0), 0);
-  const totalQty = filteredSales.reduce((sum, s) => sum + (Number(s.qty) || 0), 0);
+  const totalAmount = filteredSales.filter(s => s.status !== "returned").reduce((sum, s) => sum + (Number(s.total) || 0), 0);
+  const totalQty = filteredSales.filter(s => s.status !== "returned").reduce((sum, s) => sum + (Number(s.qty) || 0), 0);
 
   const fmtETB = (v) =>
     Number(v || 0).toLocaleString("en-ET", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -54,8 +54,8 @@ export default function Reports() {
   const handlePrint = () => {
     // Use the already-filtered data — respects fromDate, toDate, productFilter
     const printSales = filteredSales.slice().sort((a, b) => (a.date < b.date ? -1 : 1));
-    const printTotalQty = printSales.reduce((sum, s) => sum + (Number(s.qty) || 0), 0);
-    const printTotalAmount = printSales.reduce((sum, s) => sum + (Number(s.total) || 0), 0);
+    const printTotalQty = printSales.filter(s => s.status !== "returned").reduce((sum, s) => sum + (Number(s.qty) || 0), 0);
+    const printTotalAmount = printSales.filter(s => s.status !== "returned").reduce((sum, s) => sum + (Number(s.total) || 0), 0);
 
     const fromLabel = fromDate || "All";
     const toLabel = toDate || "All";

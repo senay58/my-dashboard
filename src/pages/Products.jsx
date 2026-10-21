@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import GlassCard from "../components/GlassCard.jsx";
 import { useInventory } from "../context/InventoryContext.jsx";
+import { receiptMessage } from "../inventory/store.mjs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -106,20 +107,22 @@ export default function Products() {
     setAddShopQty("");
   };
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
-    addOrUpdateProductSize({
-      name,
-      size,
-      price: Number(price),
-      addMainQty: Number(addMainQty),
-      addShopQty: Number(addShopQty),
-    });
-    setLastAddedName(name); // Auto-expand on addition
-    setMessage("Product saved successfully.");
-    clearAddForm();
-    setTimeout(() => setMessage(""), 3000);
+    try {
+      const receipt = await addOrUpdateProductSize({
+        name,
+        size,
+        price: Number(price),
+        addMainQty: Number(addMainQty),
+        addShopQty: Number(addShopQty),
+      });
+      setLastAddedName(name); // Auto-expand on addition
+      if (receipt.status === "rejected") throw new Error(receipt.message);
+      setMessage(receiptMessage(receipt, "Product confirmed in cloud."));
+      clearAddForm();
+    } catch (error) { setMessage(error.message); }
   };
 
   const startEdit = (product, sizeRow) => {
@@ -136,37 +139,39 @@ export default function Products() {
     clearAddForm();
   };
 
-  const saveEdit = (e) => {
+  const saveEdit = async (e) => {
     e.preventDefault();
     if (!editing) return;
-    updateProductSize({
-      productId: editing.productId,
-      sizeId: editing.sizeId,
-      name,
-      size,
-      price: Number(price),
-      mainStockQty: Number(addMainQty),
-      shopStockQty: Number(addShopQty),
-    });
-    setLastAddedName(name); // Keep auto-expanded
-    setMessage("Product updated.");
-    cancelEdit();
-    setTimeout(() => setMessage(""), 3000);
+    try {
+      const receipt = await updateProductSize({
+        productId: editing.productId,
+        sizeId: editing.sizeId,
+        expectedSize: editing.sizeRow,
+        name,
+        size,
+        price: Number(price),
+        mainStockQty: Number(addMainQty),
+        shopStockQty: Number(addShopQty),
+      });
+      setLastAddedName(name); // Keep auto-expanded
+      if (receipt.status === "rejected") throw new Error(receipt.message);
+      setMessage(receiptMessage(receipt, "Product update confirmed in cloud."));
+      cancelEdit();
+    } catch (error) { setMessage(error.message); }
   };
 
-  const handleTransfer = (e) => {
+  const handleTransfer = async (e) => {
     e.preventDefault();
     setTransferMessage("");
     setTransferError("");
     try {
-      requestTransfer({
+      const receipt = await requestTransfer({
         productId: transferProductId,
         sizeId: transferSizeId,
         qty: Number(transferQty),
       });
-      setTransferMessage(
-        `Transfer request created. ${transferQty} unit(s) deducted from Main stock — awaiting sales confirmation.`
-      );
+      if (receipt.status === "rejected") throw new Error(receipt.message);
+      setTransferMessage(receiptMessage(receipt, `Transfer confirmed in cloud. ${transferQty} unit(s) deducted from Main stock — awaiting sales receipt.`));
       setTransferProductId("");
       setTransferSizeId("");
       setTransferQty("");
@@ -175,6 +180,14 @@ export default function Products() {
       setTransferError(`Error: ${error.message}`);
       setTimeout(() => setTransferError(""), 4000);
     }
+  };
+
+  const runDelete = async (action, ...args) => {
+    try {
+      const receipt = await action(...args);
+      if (receipt.status === 'rejected') throw new Error(receipt.message);
+      setMessage(receiptMessage(receipt, 'Change confirmed in cloud.'));
+    } catch (error) { setMessage(error.message); }
   };
 
   const downloadInventory = () => {
@@ -526,7 +539,7 @@ export default function Products() {
                         title={`Delete all transfers for ${label}`}
                         onClick={() => {
                           if (window.confirm(`Delete ALL ${monthTransfers.length} transfer record(s) for ${label}?`)) {
-                            deleteTransfersByMonth(month);
+                            void runDelete(deleteTransfersByMonth, month);
                           }
                         }}
                         style={{ padding: "4px 10px", fontSize: "13px" }}
@@ -578,7 +591,7 @@ export default function Products() {
                                   className="btn-small btn-danger"
                                   title="Delete this record"
                                   onClick={() => {
-                                    if (window.confirm("Delete this transfer record?")) deleteTransfer(t.id);
+                                    if (window.confirm("Delete this transfer record?")) void runDelete(deleteTransfer, t.id);
                                   }}
                                   style={{ padding: "3px 8px", fontSize: "13px" }}
                                 >
@@ -671,7 +684,7 @@ export default function Products() {
                               `Are you sure you want to delete the model "${product.name}" and ALL its sizes?`
                             )
                           ) {
-                            deleteProduct(product.id);
+                            void runDelete(deleteProduct, product.id);
                           }
                         }}
                       >
@@ -735,7 +748,7 @@ export default function Products() {
                                       <button
                                         type="button"
                                         className="btn-small btn-secondary"
-                                        onClick={() => deleteProductSize(product.id, sizeRow.id)}
+                                        onClick={() => void runDelete(deleteProductSize, product.id, sizeRow.id)}
                                       >
                                         Del Size
                                       </button>
